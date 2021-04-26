@@ -1,10 +1,13 @@
-#%%
+# %%
 
+import urllib.request
 import collections
 import csv
 import ctypes
+import io
 import logging
 import re
+import sys
 import threading
 import time
 from pathlib import Path
@@ -20,7 +23,7 @@ import logpump
 
 colorama.init(autoreset=True)
 
-logging.basicConfig(level=logging.DEBUG, format='\
+logging.basicConfig(level=logging.INFO, format='\
 %(levelname)s : %(asctime)s : %(message)s')
 
 
@@ -41,7 +44,7 @@ class UsersFile:
         self.path = Path(path)
         self.loader = loader
 
-    def get(self):
+    def __call__(self):
         try:
             t = self.path.stat().st_mtime
             if self.mtime < t:
@@ -53,42 +56,75 @@ class UsersFile:
 
 
 def spitem_loader(path):
+    """spitem.txtをパースする"""
     rex = set()
     dic = {"regexp": rex}
-    current_wav = None
+    current_audio = None
     with path.open(encoding="utf-8") as f:
         for line in f.readlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
             if line.startswith("[") and line.endswith("]"):
-                current_wav = line[1:-1]
+                current_audio = line[1:-1]
                 continue
             if line.startswith("/") and line.endswith("/"):
                 pattern = re.compile(line[1:-1])
-                rex.add((pattern, current_wav))
-            dic[line] = current_wav
-    logging.debug(str(path) + " loaded")
+                rex.add((pattern, current_audio))
+            dic[line] = current_audio
+    logging.info(str(path) + " loaded")
+    return dic
+
+
+def read_la_dict(f):
+    dic = {}
+    f.readline()  # skip header line
+    for row in csv.reader(f):
+        if len(row) < 2:
+            continue
+        name, cmd = row[:2]
+        if not cmd:
+            continue
+        dic[cmd] = name
     return dic
 
 
 def la_dict_loader(path):
-    dic = {}
     with path.open(encoding='utf-8') as f:
-        f.readline()  # skip header line
-        for row in csv.reader(f):
-            if len(row) < 2:
-                continue
-            name, cmd = row[:2]
-            if not cmd:
-                continue
-            dic[cmd] = name
-    logging.debug(str(path) + " loaded")
+        dic = read_la_dict(f)
+    logging.info(str(path) + " loaded")
     return dic
 
-
 spitem = UsersFile("spitem.txt", spitem_loader)
-la_dict = UsersFile("lobbyactions.csv", la_dict_loader)
+
+la_csv = "lobbyactions.csv"
+la_dict = UsersFile(la_csv, la_dict_loader)
+
+if not Path(la_csv).is_file():
+    try:
+        url = 'https://raw.githubusercontent.com/yumimint/PSO2LogReader/main/lobbyactions.csv'
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as src, Path(la_csv).open("wb") as dst:
+            dst.write(src.read())
+            # f = io.TextIOWrapper(io.BytesIO(res.read()), encoding="utf-8")
+            # dic = read_la_dict(f)
+
+    except Exception as e:
+        print(e, file=sys.stderr)
+
+
+def spitem_check_and_notify(item):
+    dic = spitem()
+
+    if item in dic:
+        sound = dic[item]
+        playsound.playsound(sound, block=False)
+        return
+
+    for pattern, sound in dic["regexp"]:
+        if pattern.match(item):
+            playsound.playsound(sound, block=False)
+
 
 class TalkativesDetector:
     """おしゃべり過多検出器"""
@@ -315,7 +351,7 @@ def handle_Chat(ent):
     la = ''
     if _:
         cmd = _.group(1)
-        dic = la_dict.get()
+        dic = la_dict()
         if cmd in dic:
             la = re.sub(r'^\d+', '', dic[cmd])
             talk(f'{name}が{la}した')
@@ -348,16 +384,7 @@ report.start()
 def pushitem(item, num):
     # pickup.add(item, num)
     report.put(item, num)
-
-    dic = spitem.get()
-    if item in dic:
-        sound = dic[item]
-        playsound.playsound(sound, block=False)
-
-    for pattern, sound in dic["regexp"]:
-        if pattern.match(item):
-            playsound.playsound(sound, block=False)
-
+    spitem_check_and_notify(item)
 
 
 def handle_Reward(ent):
@@ -420,19 +447,22 @@ def on_entry(ent):
         fn(ent)
 
 
-##############################################################################
-#%%
+def main():
+    ctypes.windll.kernel32.SetConsoleTitleW("PSO2 Log Reader")
+    pumpz = logpump.LogPumpz(on_entry)
+    pumpz.start()
+    print(Fore.GREEN + "START")
+    try:
+        while True:
+            line = input().strip()
+            if line == "exit":
+                break
+    except KeyboardInterrupt:
+        pass
+    pumpz.stop()
+    print("done")
 
-ctypes.windll.kernel32.SetConsoleTitleW("PSO2 Log Reader")
-pumpz = logpump.LogPumpz(on_entry)
-pumpz.start()
-print(Fore.GREEN + "START")
-try:
-    while True:
-        line = input().strip()
-        if line == "exit":
-            break
-except KeyboardInterrupt:
-    pass
-pumpz.stop()
-print("done")
+
+# %%
+if __name__ == "__main__":
+    main()
