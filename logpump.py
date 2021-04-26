@@ -29,7 +29,7 @@ class Entry(list):
 
     def __eq__(self, other): return self.sequence == other.sequence
     def __lt__(self, other): return self.sequence < other.sequence
-    def __str__(self): return "\t".join(self)
+    def __str__(self): return " | ".join(self)
 
     @staticmethod
     @functools.lru_cache(maxsize=8)
