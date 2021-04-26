@@ -137,7 +137,7 @@ def seqregurator(callback):
 
             if expect is None or entry.sequence < expect:
                 if expect is not None:
-                    logging.info('sequense restart')
+                    logging.info(f'sequense restart ({entry.sequence})')
                     flush(heap, expect)
                 expect = entry.sequence
 
@@ -148,11 +148,9 @@ def seqregurator(callback):
                 expect += 1
 
             if heap:
-                ts = [x.timestamp for x in heap]
-                delta = max(ts) - min(ts)
-                pend = [f'{x.sequence}' for x in heap]
-                logging.debug('d={} {}'.format(delta, ','.join(pend)))
-                if delta > 5:  # たぶん起きないけど念の為
+                pend = ','.join(map(str, sorted([x.sequence for x in heap])))
+                logging.debug(f"expect:{expect} pend:{pend}")
+                if len(heap) >= 50:
                     expect = flush(heap, expect)
 
     coro = main()
