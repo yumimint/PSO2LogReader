@@ -36,7 +36,7 @@ Python環境をお持ちの方は後述の依存モジュールをインスト�
 
 ## 依存モジュール
 
-'''
+```
 pip3 install https://github.com/yumimint/bouyomichan/releases/download/0.1.0/bouyomichan-0.1.0.tar.gz
 pip3 install watchdog colorama playsound pyperclip
-'''
+```
