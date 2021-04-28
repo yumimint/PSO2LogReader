@@ -1,10 +1,12 @@
 import collections
 import csv
+import io
 import logging
 import pathlib
 import re
 import threading
 import time
+import urllib.request
 
 
 class UsersFile:
@@ -67,6 +69,22 @@ def read_la_dict(f):
             continue
         dic[cmd] = name
     return dic
+
+
+def load_la_dict_online():
+    url = 'https://raw.githubusercontent.com/yumimint/PSO2LogReader/main/lobbyactions.csv'
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as src:
+            f = io.TextIOWrapper(io.BytesIO(src.read()), encoding="utf-8")
+        logging.info("lobbyactions.csv downloaded.")
+
+    except Exception as e:
+        logging.warning(e)
+        return {}
+
+    return read_la_dict(f)
+
 
 
 class TalkativesDetector:

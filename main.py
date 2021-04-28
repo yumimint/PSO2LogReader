@@ -3,8 +3,6 @@
 import ctypes
 import logging
 import re
-import sys
-import urllib.request
 from pathlib import Path
 
 import colorama
@@ -33,8 +31,9 @@ ChatColors = {
 }
 
 spitem = misc.UsersFile("spitem.txt", misc.spitem_loader)
-la_csv = "lobbyactions.csv"
-la_dict = misc.UsersFile(la_csv, misc.la_dict_loader)
+la_dict = misc.UsersFile("lobbyactions.csv", misc.la_dict_loader)
+if len(la_dict()) == 0:
+    la_dict.data = misc.load_la_dict_online()
 
 
 def pushitem(item, num):
@@ -49,20 +48,6 @@ def report_handler(text):
 
 report = misc.DelayedReporter(report_handler)
 report.start()
-
-if not Path(la_csv).is_file():
-    try:
-        url = 'https://raw.githubusercontent.com/yumimint/PSO2LogReader/main/lobbyactions.csv'
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req) as src, Path(la_csv).open("wb") as dst:
-            dst.write(src.read())
-            # f = io.TextIOWrapper(io.BytesIO(res.read()), encoding="utf-8")
-            # dic = read_la_dict(f)
-
-        del url, req, src, dst
-
-    except Exception as e:
-        print(e, file=sys.stderr)
 
 
 def spitem_check_and_notify(item):
