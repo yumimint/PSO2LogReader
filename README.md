@@ -15,7 +15,7 @@
 
 <logreader.exe>を実行してください。
 
-Python環境をお持ちの方は後述の依存モジュールをインストールして<logreader.py>を実行してください。
+Python環境をお持ちの方は後述の依存モジュールをインストールして<main.py>を実行してください。
 
 ## spitem.txt
 
