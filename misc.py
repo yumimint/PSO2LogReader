@@ -93,9 +93,6 @@ class TalkativesDetector:
 
 
 class CasinoCounter:
-    """ Amusement
-    """
-
     printed = False
 
     def __init__(self, talker):

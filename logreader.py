@@ -7,12 +7,12 @@ import sys
 import urllib.request
 from pathlib import Path
 
-import bouyomichan
 import colorama
 import playsound
 import pyperclip
 from colorama import Back, Fore, Style
 
+import bouyomichan
 import chatcmd
 import logpump
 import misc
@@ -24,7 +24,6 @@ colorama.init(autoreset=True)
 logging.basicConfig(level=logging.INFO, format='\
 %(levelname)s : %(asctime)s : %(message)s')
 
-
 ChatColors = {
     'PUBLIC': 'WHITE',
     'GROUP': 'GREEN',
@@ -33,10 +32,23 @@ ChatColors = {
     'PARTY': 'CYAN',
 }
 
-
 spitem = misc.UsersFile("spitem.txt", misc.spitem_loader)
 la_csv = "lobbyactions.csv"
 la_dict = misc.UsersFile(la_csv, misc.la_dict_loader)
+
+
+def pushitem(item, num):
+    report.put(item, num)
+    spitem_check_and_notify(item)
+
+
+def report_handler(text):
+    print(Fore.YELLOW + text)
+    talk(text)
+
+
+report = misc.DelayedReporter(report_handler)
+report.start()
 
 if not Path(la_csv).is_file():
     try:
@@ -46,6 +58,8 @@ if not Path(la_csv).is_file():
             dst.write(src.read())
             # f = io.TextIOWrapper(io.BytesIO(res.read()), encoding="utf-8")
             # dic = read_la_dict(f)
+
+        del url, req, src, dst
 
     except Exception as e:
         print(e, file=sys.stderr)
@@ -59,9 +73,14 @@ def spitem_check_and_notify(item):
         play_sound(sound)
         return
 
-    for pattern, sound in dic["regexp"]:
-        if pattern.match(item):
-            play_sound(sound)
+    try:
+        for pattern, sound in dic["regexp"]:
+            if pattern.match(item):
+                play_sound(sound)
+                return
+    except KeyError:
+        logging.warning("わんわん")
+        pass
 
 
 talkactive = misc.TalkativesDetector()
@@ -134,31 +153,13 @@ def handle_SymbolChat(ent):
     del time, seq, channel, id
 
 
-def report_handler(text):
-    print(Fore.YELLOW + text)
-    talk(text)
-
-
-report = misc.DelayedReporter(report_handler)
-report.start()
-
-
-def pushitem(item, num):
-    report.put(item, num)
-    spitem_check_and_notify(item)
-
-
 def handle_Reward(ent):
-    """ Reward
-    """
     item, num = ent[5], ent.Num
     pushitem(item, num)
     pyperclip.copy(item)
 
 
 def handle_Action(ent):
-    """ Action
-    """
     act, item, num, meseta = ent[2], ent[5], ent.Num, ent.Meseta
     num = 1 if num is None else num
 
@@ -179,18 +180,12 @@ def handle_Action(ent):
 
 
 def handle_Craft(ent):
-    """ Craft
-    """
     act, item, num = ent[2], ent[5], ent.Num
     if 'Material' in act and num is not None:
         pushitem(item, num)
 
 
 def handle_Scratch(ent):
-    """ Scratch
-    """
-    # 0                     1   2                           3           4           5           6                           7
-    # 2020-02-04T22:23:40	209	アウェイクアドミニスター	Received	14386271	モモーロ	574「スクナヒメポーズ２」	Num(1)
     if 'Received' in ent[3]:
         item, num = ent[6], ent.Num
         pushitem(item, num)
