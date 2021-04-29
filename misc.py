@@ -153,11 +153,11 @@ class ItemCounter(dict):
         if item not in self:
             self[item] = 0
         self[item] += num
-
-    def names(self):
+ 
+    def sorted_items(self):
         ls = list(filter(lambda x: x[1] > 0, self.items()))
         ls.sort(key=lambda x: (-x[1], x[0]))
-        return map(lambda x: self.pair2name(*x), ls)
+        return ls
 
     units = [
         (lambda item: 'メダル' in item, '枚'),
@@ -167,7 +167,8 @@ class ItemCounter(dict):
     ]
 
     @staticmethod
-    def pair2name(item, num):
+    def pair2name(pair):
+        item, num = pair
         # item = item.translate(ItemCounter.zen2han_alpha)
         if item == 'メセタ':
             return f'{num:,}メセタ'
@@ -186,16 +187,16 @@ class ItemCounter(dict):
 class DelayedReporter:
     delay = 30
 
-    def __init__(self, report_cb):
-        self.report_cb = report_cb
-        self.count = ItemCounter()
+    def __init__(self, callback):
+        self.callback = callback
+        self.counter = ItemCounter()
         self.added = threading.Event()
         self.mutex = threading.Lock()
         self.expiry = 0
         self.th = threading.Thread(target=self.main, daemon=True)
-        self.keep_running = True
 
     def start(self):
+        self.keep_running = True
         self.th.start()
 
     def stop(self):
@@ -204,7 +205,7 @@ class DelayedReporter:
 
     def put(self, item, num):
         with self.mutex:
-            self.count.add(item, num)
+            self.counter.add(item, num)
             self.expiry = time.time() + self.delay
         self.added.set()
 
@@ -220,8 +221,7 @@ class DelayedReporter:
                     time.sleep(s)
 
             with self.mutex:
-                names = self.count.names()
-                self.count.clear()
+                counter = self.counter
+                self.counter = ItemCounter()
 
-            text = ' '.join(names)
-            self.report_cb(text)
+            self.callback(counter)

@@ -42,9 +42,12 @@ def pushitem(item, num):
     spitem_check_and_notify(item)
 
 
-def report_handler(text):
-    print(Fore.YELLOW + text)
-    talk(text)
+def report_handler(counter: misc.ItemCounter):
+    pairs = counter.sorted_items()
+    names = list(map(misc.ItemCounter.pair2name, pairs))
+    for name in names:
+        print(Fore.YELLOW + name)
+    talk(" ".join(names))
 
 
 report = misc.DelayedReporter(report_handler)
@@ -101,7 +104,7 @@ def chat_print(ent, text):
 def handle_Chat(ent):
     time, seq, channel, id, name, mess = ent[:6]
 
-    if channel == 'PARTY' and handle_Amusement.count:
+    if channel == 'PARTY' and casinocounter.count:
         casinocounter.reset()
         # talk('カウンタをリセットしました')
 
