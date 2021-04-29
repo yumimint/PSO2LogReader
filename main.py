@@ -84,7 +84,6 @@ def play_sound(sound):
 
 def chat_print(ent, text):
     time, seq, channel, id, name = ent[:5]
-    del seq, id
 
     time = time[-8:]
     channel = 'GROUP' if channel == 'CHANNEL' else channel
@@ -100,10 +99,7 @@ def chat_print(ent, text):
 
 
 def handle_Chat(ent):
-    """ Chat
-    """
     time, seq, channel, id, name, mess = ent[:6]
-    del time, seq, id
 
     if channel == 'PARTY' and handle_Amusement.count:
         handle_Amusement.reset()
@@ -135,7 +131,6 @@ def handle_SymbolChat(ent):
     time, seq, channel, id, name, said = ent[:6]
     chat_print(ent, said)
     talk(f'{name}のシンボルアート')
-    del time, seq, channel, id
 
 
 def handle_Reward(ent):

@@ -168,7 +168,6 @@ class CasinoCounter:
             return
 
         bet, ret, before, after = map(int, ent[5:9])
-        del before, after
 
         self.add(bet, ret)
 
