@@ -10,6 +10,7 @@ cmd_rex = [
     '(skillring|sr|' 'costume|cs|' 'camouflage|cmf)' ' +[^ ]+',
     r'[cfm]?la +[^ ]+( +ss?(\d+(\.\d+)?))?',
     r'ce\d( +s(\d+(\.\d+)?))?',
+    r'stamp +[^ ]',
 ]
 cmd_rex = r'^/(' + '|'.join(cmd_rex) + r') ?'
 cmd_rex = re.compile(cmd_rex)
