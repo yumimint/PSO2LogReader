@@ -86,7 +86,6 @@ def load_la_dict_online():
     return read_la_dict(f)
 
 
-
 class TalkativesDetector:
     """おしゃべり過多検出器"""
 
@@ -111,12 +110,8 @@ class TalkativesDetector:
 
 
 class CasinoCounter:
-    printed = False
-
-    def __init__(self, talker):
-        self.talker = talker
+    def __init__(self):
         self.reset()
-        self.badcount = [0] * 6
 
     def reset(self):
         self.count = 0
@@ -126,15 +121,13 @@ class CasinoCounter:
         self.defeats = 0
         self.defeats_max = 0
 
-    def add(self, bet, ret):
+    def update(self, bet, ret):
         self.count += 1
         self.bet += bet
         self.ret += ret
         if ret == 0:
             self.defeats += 1
             self.defeats_max = max(self.defeats_max, self.defeats)
-            if self.defeats > 1 and bet <= 5:
-                self.badcount[bet] += 1
         else:
             self.defeats = 0
             self.hit += 1
@@ -153,40 +146,6 @@ class CasinoCounter:
 
     @property
     def income(self): return self.ret - self.bet
-
-    @property
-    def meter(self):
-        m, n = self.defeats, self.defeats_max - self.defeats
-        return 'x' * m + '.' * n
-
-    @property
-    def toobad(self):
-        return self.defeats > 0 and self.defeats == self.defeats_max
-
-    def __call__(self, ent):
-        if ent[2] in ['UsePass', 'Buy']:
-            return
-
-        bet, ret, before, after = map(int, ent[5:9])
-
-        self.add(bet, ret)
-
-        c = self
-        if ret:
-            self.talker(f"{ret}枚当たり 累計{c.income} ヒット率{c.hitrate:.3f}")
-        elif c.defeats > 2:
-            self.talker(f'{c.defeats}連敗 ')
-
-    def report(self):
-        c = self
-        print(
-            c.meter,
-            # f'{bet}',
-            # f'{ret:3d}',
-            f'{c.hit}/{c.count}({c.hitrate:.3f})',
-            # f'Total({after:,})',
-            f'Rate({c.rate:.2f}) In({c.income:,})',
-        )
 
 
 class ItemCounter(dict):

@@ -15,7 +15,7 @@ import chatcmd
 import logpump
 import misc
 
-VERSION = "ver 210428"
+VERSION = "ver 210429"
 
 colorama.init(autoreset=True)
 
@@ -30,6 +30,7 @@ ChatColors = {
     'PARTY': 'CYAN',
 }
 
+casinocounter = misc.CasinoCounter()
 spitem = misc.UsersFile("spitem.txt", misc.spitem_loader)
 la_dict = misc.UsersFile("lobbyactions.csv", misc.la_dict_loader)
 if len(la_dict()) == 0:
@@ -47,7 +48,6 @@ def report_handler(text):
 
 
 report = misc.DelayedReporter(report_handler)
-report.start()
 
 
 def spitem_check_and_notify(item):
@@ -102,7 +102,7 @@ def handle_Chat(ent):
     time, seq, channel, id, name, mess = ent[:6]
 
     if channel == 'PARTY' and handle_Amusement.count:
-        handle_Amusement.reset()
+        casinocounter.reset()
         # talk('カウンタをリセットしました')
 
     _ = re.search(r'/[cmf]?la +([^ ]+)', mess)
@@ -171,7 +171,24 @@ def handle_Scratch(ent):
         pushitem(item, num)
 
 
-handle_Amusement = misc.CasinoCounter(talk)
+def handle_Amusement(ent):
+    if ent[2] in ['UsePass', 'Buy']:
+        return
+
+    bet, ret, before, after = map(int, ent[5:9])
+
+    c = casinocounter
+    c.update(bet, ret)
+
+    if ret:
+        bouyomichan.talk(f"{ret}枚当たり 累計{c.income} ヒット率{c.hitrate:.3f}")
+    elif c.defeats > 2:
+        bouyomichan.talk(f'{c.defeats}連敗 ')
+
+    meter = '#' * c.defeats + '_' * (c.defeats_max - c.defeats)
+
+    title = f"PSO2LogReader {VERSION} -- {meter} HitRate({c.hitrate:.3f}) ReturnRate({c.rate:.2f}) In({c.income:,})"
+    ctypes.windll.kernel32.SetConsoleTitleW(title)
 
 
 def on_entry(ent):
@@ -187,13 +204,13 @@ def main():
     ctypes.windll.kernel32.SetConsoleTitleW(f"PSO2LogReader {VERSION}")
     pumpz = logpump.LogPumpz(on_entry)
     pumpz.start()
+    report.start()
     print(Fore.GREEN + "START")
     try:
         while True:
             line = input().strip()
             if line == "exit":
                 break
-            handle_Amusement.report()
     except KeyboardInterrupt:
         pass
     pumpz.stop()
