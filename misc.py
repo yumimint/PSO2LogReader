@@ -160,10 +160,8 @@ class ItemCounter(dict):
         return ls
 
     units = [
-        (lambda item: 'メダル' in item, '枚'),
-        (lambda item: '券' in item, '枚'),
+        (lambda item: re.search(r'(券|メダル|バッヂ|パス)', item) is not None, '枚'),
         (lambda item: '肉' in item, 'Kg'),
-        (lambda item: True, '個'),
     ]
 
     @staticmethod
@@ -174,6 +172,7 @@ class ItemCounter(dict):
             return f'{num:,}メセタ'
         if num == 1:
             return item
+        unit = "個"
         for _ in ItemCounter.units:
             if _[0](item):
                 unit = _[1]
