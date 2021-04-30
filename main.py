@@ -57,18 +57,17 @@ def spitem_check_and_notify(item):
     dic = spitem()
 
     if item in dic:
+        talk(item)
         sound = dic[item]
         play_sound(sound)
         return
 
-    try:
+    if "regexp" in dic:
         for pattern, sound in dic["regexp"]:
             if pattern.match(item):
+                talk(item)
                 play_sound(sound)
                 return
-    except KeyError:
-        logging.warning("わんわん")
-        pass
 
 
 talkactive = misc.TalkativesDetector()
