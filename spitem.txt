@@ -27,3 +27,6 @@
 
 [yahoo.wav]
 /モジュール／.*/
+
+[cash_register.mp3]
+/(メセタ結晶|イザネ宝晶)/
