@@ -156,7 +156,8 @@ def seqregurator(callback):
             if heap:
                 pend = ','.join(map(str, sorted([x.sequence for x in heap])))
                 logging.debug(f"expect:{expect} pend:{pend}")
-                if len(heap) >= 50:
+                ts = [x.timestamp for x in heap]
+                if (max(ts) - min(ts)) > 3:
                     expect = flush(heap, expect)
 
     coro = main()
