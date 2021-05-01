@@ -27,9 +27,14 @@ class Entry(list):
         self.timestamp = self.str2ts(self[0])
         self.sequence = int(self[1])
 
-    def __eq__(self, other): return self.sequence == other.sequence
-    def __lt__(self, other): return self.sequence < other.sequence
-    def __str__(self): return " | ".join(self)
+    def __eq__(self, other):
+        return self.sequence == other.sequence
+
+    def __lt__(self, other):
+        return self.sequence < other.sequence
+
+    def __str__(self):
+        return " | ".join(self)
 
     @staticmethod
     @functools.lru_cache(maxsize=8)
@@ -45,7 +50,8 @@ class Entry(list):
         return int(dt.timestamp())
 
     @property
-    def category(self): return self[-1]
+    def category(self):
+        return self[-1]
 
     # Meseta,Num等の数値を属性として取得する
     def __getattr__(self, name):

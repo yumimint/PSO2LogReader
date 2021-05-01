@@ -145,7 +145,8 @@ class CasinoCounter:
         return self.hit / self.count
 
     @property
-    def income(self): return self.ret - self.bet
+    def income(self):
+        return self.ret - self.bet
 
 
 class ItemCounter(dict):
@@ -153,7 +154,7 @@ class ItemCounter(dict):
         if item not in self:
             self[item] = 0
         self[item] += num
- 
+
     def sorted_items(self):
         ls = list(filter(lambda x: x[1] > 0, self.items()))
         ls.sort(key=lambda x: (-x[1], x[0]))

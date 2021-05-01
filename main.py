@@ -3,12 +3,11 @@
 import ctypes
 import logging
 import re
-from pathlib import Path
 
 import colorama
 import playsound
 import pyperclip
-from colorama import Back, Fore, Style
+from colorama import Fore
 
 import bouyomichan
 import chatcmd

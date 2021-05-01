@@ -1,15 +1,11 @@
+import os
 import re
 from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
 
-try:
-    import os
-    import pathlib
-    os.chdir(pathlib.Path(__file__).parent)
-except:
-    pass
+os.chdir(Path(__file__).parent)
 
 la_rex = re.compile(r"/la ?([\da-zA-Z_+']+)")
 brackets_rex = re.compile(r'(\d+)「(.+)」')
