@@ -16,6 +16,8 @@ import misc
 
 VERSION = "ver 210429"
 
+REPORT_ITEM_MAX = 10
+
 colorama.init(autoreset=True)
 
 logging.basicConfig(level=logging.INFO, format='\
@@ -46,6 +48,12 @@ def report_handler(counter: misc.ItemCounter):
     names = list(map(misc.ItemCounter.pair2name, pairs))
     for name in names:
         print(Fore.YELLOW + name)
+
+    if REPORT_ITEM_MAX is not None:
+        n = len(names)
+        if n > REPORT_ITEM_MAX:
+            names = names[:REPORT_ITEM_MAX] + [f"残り{n - REPORT_ITEM_MAX}件省略"]
+
     talk(" ".join(names))
 
 
@@ -150,7 +158,7 @@ def handle_Action(ent):
     if act == '[Warehouse-Meseta]':
         return
 
-    if act == '[Pickup]' and meseta is None:
+    if act.startswith('[Pickup') and meseta is None:
         pushitem(item, num)
 
     # if 'Sell' in act and meseta is None:
