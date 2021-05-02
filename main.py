@@ -123,6 +123,7 @@ def handle_Chat(ent):
             la = re.sub(r'^\d+', '', dic[cmd])
             talk(f'{name}が{la}した')
             la = ' ' + Fore.RESET + dic[cmd]
+            pyperclip.copy(_.group(0))
 
     chat_print(ent, mess + la)
 
