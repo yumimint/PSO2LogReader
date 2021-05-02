@@ -256,6 +256,8 @@ class LogPumpz:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(levelname)s : %(asctime)s : %(message)s')
     pumpz = LogPumpz(print)
     pumpz.start()
     try:
