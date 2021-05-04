@@ -1,8 +1,8 @@
 import os
 import re
+import urllib.request
 from pathlib import Path
 
-import requests
 from bs4 import BeautifulSoup
 
 os.chdir(Path(__file__).parent)
@@ -27,9 +27,9 @@ def name_regulator(name):
     return name.translate(han2zen_alpha)
 
 
-url = 'http://pso2.swiki.jp/index.php?ロビーアクション'
-res = requests.get(url, verify=False)
-soup = BeautifulSoup(res.text, "html.parser")
+url = 'http://pso2.swiki.jp/index.php?%E3%83%AD%E3%83%93%E3%83%BC%E3%82%A2%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3'
+with urllib.request.urlopen(urllib.request.Request(url)) as res:
+    soup = BeautifulSoup(res.read().decode("utf-8"), "html.parser")
 
 
 def records():
