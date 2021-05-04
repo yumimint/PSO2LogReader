@@ -14,7 +14,7 @@ import chatcmd
 import logpump
 import misc
 
-VERSION = "ver 210429"
+VERSION = "ver 210504"
 
 REPORT_ITEM_MAX = 10
 
