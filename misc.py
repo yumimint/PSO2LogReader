@@ -1,5 +1,5 @@
-import collections
 import csv
+import heapq
 import io
 import logging
 import pathlib
@@ -90,22 +90,20 @@ class TalkativesDetector:
     """おしゃべり過多検出器"""
 
     def __init__(self):
-        self.od = collections.OrderedDict()
+        self.heap = []
 
     def __call__(self, text, period=60):
         """一定期間内に同じtextがあればTrueを返す"""
         now = time.time()
         self.forget(now)
-        exists = text in self.od
-        self.od[text] = now + period
-        self.od.move_to_end(text, last=True)
+        exists = any(map(lambda x: x[1] == text, self.heap))
+        heapq.heappush(self.heap, (now + period, text))
         return exists
 
     def forget(self, expiry):
-        for t in list(self.od.values()):
-            if t > expiry:
-                break
-            self.od.popitem(last=False)
+        heap = self.heap
+        while heap and heap[0][0] < expiry:
+            heapq.heappop(heap)[1]
 
 
 class CasinoCounter:
