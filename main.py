@@ -81,13 +81,13 @@ talkactive = misc.TalkativesDetector()
 talkactive_sound = misc.TalkativesDetector()
 
 
-def talk(text):
-    if not talkactive(text):
+def talk(text, guard_time=60):
+    if not talkactive(text, guard_time):
         bouyomichan.talk(text)
 
 
-def play_sound(sound):
-    if not talkactive_sound(sound, 1):
+def play_sound(sound, guard_time=1):
+    if not talkactive_sound(sound, guard_time):
         playsound.playsound(sound, block=False)
 
 
@@ -105,6 +105,9 @@ def chat_print(ent, text):
     text = getattr(Fore, col) + text
 
     print(f"{time} {name} {text}")
+
+
+##############################################################################
 
 
 def handle_Chat(ent):
@@ -159,15 +162,13 @@ def handle_Action(ent):
     if act == '[Warehouse-Meseta]':
         return
 
-    if act.startswith('[Pickup-'):
-        play_sound("emergency-alert1.mp3")
-        talk("警告！アイテムパックが満杯です！")
+    if act.startswith('[Pickup-ToWarehouse'):
+        guard_time = 15
+        play_sound("emergency-alert1.mp3", guard_time)
+        talk("警告！アイテムパックが満杯です！", guard_time)
 
     if act.startswith('[Pickup') and meseta is None:
         pushitem(item, num)
-
-    # if 'Sell' in act and meseta is None:
-    #     pickup.add(item, -num)
 
     if meseta:
         pushitem('メセタ', meseta)
