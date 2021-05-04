@@ -212,8 +212,8 @@ def on_entry(ent):
 
 def main():
     ctypes.windll.kernel32.SetConsoleTitleW(f"PSO2LogReader {VERSION}")
-    pumpz = logpump.LogPumpz(on_entry)
-    pumpz.start()
+    pump = logpump.LogPump(on_entry)
+    pump.start()
     report.start()
     print(Fore.GREEN + "START")
     try:
@@ -223,7 +223,7 @@ def main():
                 break
     except KeyboardInterrupt:
         pass
-    pumpz.stop()
+    pump.stop()
     report.stop()
     print("done")
 

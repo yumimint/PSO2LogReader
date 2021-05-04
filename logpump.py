@@ -3,16 +3,13 @@ import functools
 import heapq
 import logging
 import re
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
 
-from watchdog.events import PatternMatchingEventHandler
-# from watchdog.observers import Observer
-# Observerだと意図した動作をしないのでPollingObserverを使う
-from watchdog.observers.polling import PollingObserver
-
-Observer = PollingObserver
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 
 class Entry(list):
@@ -165,26 +162,13 @@ def seqregurator(callback):
     return coro.send
 
 
-class LogPump:
-    """
-    - ログファイルが更新されたらcallbackするオブザーバ
-    - callback(entry: Entry)
-    """
-
-    pattern = '*Log*.txt'
-
+class LogFolder:
     def __init__(self, path, callback):
+        logging.debug(f'LogFolder({str(path)})')
         self.path = path
         self.callback = seqregurator(callback)
-        event_handler = self.Handler(self)
-        self.observer = Observer()
-        self.observer.schedule(event_handler, str(self.path))
-        self.initlogs()
-        self.count = 0
 
-    def initlogs(self):
-        logging.debug('initlogs')
-        logs = list(self.path.glob(self.pattern))
+        logs = list(self.path.glob("*Log*.txt"))
         categories = set([LogFile.cate(x.stem) for x in logs])
 
         def newestof(cate):
@@ -195,74 +179,96 @@ class LogPump:
             str(x): LogFile(x) for x in [newestof(cate) for cate in categories]
         }
 
-    class Handler(PatternMatchingEventHandler):
-        def __init__(self, parent: 'LogPump'):
-            super().__init__(patterns=LogPump.pattern,
-                             ignore_directories=True)
-            self.parent = parent
+    def scan(self):
+        for log in self.logfiles.values():
+            for row in csv.reader(log.tail(), dialect=csv.excel_tab):
+                entry = Entry(row, log.category)
+                self.callback(entry)
 
-        def on_modified(self, event):
-            self.parent.on_logupdate(event.src_path)
+    def newlog(self, path):
+        self.logfiles[path] = LogFile(path, True)
+
+    def remove(self, path):
+        try:
+            del self.logfiles[path]
+            logging.debug('removed ' + path)
+        except KeyError:
+            pass
+
+
+class LogPump:
+    def __init__(self, callback):
+        self.folderz = {}
+        sega = MyDocuments().joinpath("SEGA")
+        for subpath in [
+            'PHANTASYSTARONLINE2/log',
+            'PHANTASYSTARONLINE2_NGS/log',
+            'PHANTASYSTARONLINE2_NGS/log_ngs',
+            'PHANTASYSTARONLINE2_NGS_CBT/log',
+            'PHANTASYSTARONLINE2_NGS_CBT/log_ngs',
+        ]:
+            path = sega.joinpath(subpath)
+            if path.is_dir():
+                self.folderz[path] = LogFolder(path, callback)
+
+        self.observer = Observer()
+        self.observer.schedule(self.Handler(self.folderz),
+                               str(sega),
+                               recursive=True)
+        self.th = threading.Thread(target=self._main, daemon=True)
+
+    class Handler(FileSystemEventHandler):
+        def __init__(self, folderz):
+            self.folderz = folderz
+
+        def on_created(self, event):
+            logging.debug(event)
+            if not event.src_path.endswith(".txt"):
+                return
+            try:
+                folder = self.folderz[Path(event.src_path).parent]
+                folder.newlog(event.src_path)
+            except KeyError:
+                pass
 
         def on_deleted(self, event):
-            dic = self.parent.logfiles
-            if event.src_path in dic:
-                del dic[event.src_path]
-                logging.debug('removed ' + Path(event.src_path).name)
+            logging.debug(event)
+            if not event.src_path.endswith(".txt"):
+                return
+            try:
+                folder = self.folderz[Path(event.src_path).parent]
+                folder.remove(event.src_path)
+            except KeyError:
+                pass
 
-        on_created = on_modified
         on_moved = on_deleted
 
+    def _main(self):
+        while self.keep_running:
+            for folder in self.folderz.values():
+                folder.scan()
+            time.sleep(0.3)
+
     def start(self):
+        self.keep_running = True
         self.observer.start()
+        self.th.start()
 
     def stop(self):
+        self.keep_running = False
         self.observer.stop()
         self.observer.join()
-
-    def on_logupdate(self, path):
-        log = self.logfiles.get(path)
-        if not log:
-            log = LogFile(path, True)
-            self.logfiles[path] = log
-        for row in csv.reader(log.tail(), dialect=csv.excel_tab):
-            self.count += 1
-            entry = Entry(row, log.category)
-            self.callback(entry)
-
-
-class LogPumpz:
-    def __init__(self, callback):
-        self.pumpz = []
-        mydoc = MyDocuments()
-        for path in [
-            'SEGA/PHANTASYSTARONLINE2/log',
-            'SEGA/PHANTASYSTARONLINE2_NGS/log',
-            'SEGA/PHANTASYSTARONLINE2_NGS/log_ngs',
-            'SEGA/PHANTASYSTARONLINE2_NGS_CBT/log',
-            'SEGA/PHANTASYSTARONLINE2_NGS_CBT/log_ngs',
-        ]:
-            path = mydoc.joinpath(path)
-            if path.is_dir():
-                self.pumpz.append(LogPump(path, callback))
-
-    def start(self):
-        for reader in self.pumpz:
-            reader.start()
-
-    def stop(self):
-        for reader in self.pumpz:
-            reader.stop()
+        self.th.join()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG,
                         format='%(levelname)s : %(asctime)s : %(message)s')
-    pumpz = LogPumpz(print)
-    pumpz.start()
+    pump = LogPump(print)
+    pump.start()
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         pass
-    pumpz.stop()
+    pump.stop()
