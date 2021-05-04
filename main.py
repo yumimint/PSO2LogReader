@@ -159,6 +159,10 @@ def handle_Action(ent):
     if act == '[Warehouse-Meseta]':
         return
 
+    if act.startswith('[Pickup-'):
+        play_sound("emergency-alert1.mp3")
+        talk("警告！アイテムパックが満杯です！")
+
     if act.startswith('[Pickup') and meseta is None:
         pushitem(item, num)
 
