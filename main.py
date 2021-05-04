@@ -78,7 +78,7 @@ def spitem_check_and_notify(item):
 
 
 talkactive = misc.TalkativesDetector()
-talkactive_sound = misc.TalkativesDetector(1)
+talkactive_sound = misc.TalkativesDetector()
 
 
 def talk(text):
@@ -87,7 +87,7 @@ def talk(text):
 
 
 def play_sound(sound):
-    if not talkactive_sound(sound):
+    if not talkactive_sound(sound, 1):
         playsound.playsound(sound, block=False)
 
 

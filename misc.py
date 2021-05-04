@@ -89,16 +89,15 @@ def load_la_dict_online():
 class TalkativesDetector:
     """おしゃべり過多検出器"""
 
-    def __init__(self, period=60):
+    def __init__(self):
         self.od = collections.OrderedDict()
-        self.period = period
 
-    def __call__(self, text):
+    def __call__(self, text, period=60):
         """一定期間内に同じtextがあればTrueを返す"""
         now = time.time()
-        self.forget(now - self.period)
+        self.forget(now)
         exists = text in self.od
-        self.od[text] = now
+        self.od[text] = now + period
         self.od.move_to_end(text, last=True)
         return exists
 
