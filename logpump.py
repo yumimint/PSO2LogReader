@@ -12,6 +12,9 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 
+logger = logging.getLogger(__name__)
+
+
 class Entry(list):
     """ログのエントリを表現するクラス"""
 
@@ -79,7 +82,7 @@ class LogFile:
         self.path = Path(path)
         self.pos = 2 if newfile else self.path.stat().st_size  # 2=BOM
         self.category = self.cate(self.path.stem)
-        logging.debug(f'LogFile({self.path.stem}, {newfile}) pos={self.pos}')
+        logger.debug(f'LogFile({self.path.stem}, {newfile}) pos={self.pos}')
 
     @staticmethod
     def cate(stem):
@@ -94,7 +97,7 @@ class LogFile:
             try:
                 return self._tail()
             except (UnicodeError, self.IncompleteLineError) as e:
-                logging.debug(f'{self.path.stem}: {e}')
+                logger.debug(f'{self.path.stem}: {e}')
                 time.sleep(0.5)
 
     def _tail(self) -> list:
@@ -129,7 +132,7 @@ def seqregurator(callback):
             expect = entry.sequence + 1
         if drop:
             drop = ','.join(map(str, drop))
-            logging.warning(f'Drop {drop}')
+            logger.warning(f'Drop {drop}')
         return expect
 
     def main():
@@ -140,7 +143,7 @@ def seqregurator(callback):
 
             if expect is None or entry.sequence < expect:
                 if expect is not None:
-                    logging.info(f'sequense restart ({entry.sequence})')
+                    logger.info(f'sequense restart ({entry.sequence})')
                     flush(heap, expect)
                 expect = entry.sequence
 
@@ -152,7 +155,7 @@ def seqregurator(callback):
 
             if heap:
                 pend = ','.join(map(str, sorted([x.sequence for x in heap])))
-                logging.debug(f"expect:{expect} pend:{pend}")
+                logger.debug(f"expect:{expect} pend:{pend}")
                 ts = [x.timestamp for x in heap]
                 if (max(ts) - min(ts)) > 3:
                     expect = flush(heap, expect)
@@ -164,7 +167,7 @@ def seqregurator(callback):
 
 class LogFolder:
     def __init__(self, path, callback):
-        logging.debug(f'LogFolder({str(path)})')
+        logger.debug(f'LogFolder({str(path)})')
         self.path = path
         self.callback = seqregurator(callback)
 
@@ -191,7 +194,7 @@ class LogFolder:
     def remove(self, path):
         try:
             del self.logfiles[path]
-            logging.debug('removed ' + path)
+            logger.debug('removed ' + path)
         except KeyError:
             pass
 
@@ -222,7 +225,7 @@ class LogPump:
             self.folderz = folderz
 
         def on_created(self, event):
-            logging.debug(event)
+            logger.debug(event)
             if not event.src_path.endswith(".txt"):
                 return
             try:
@@ -232,7 +235,7 @@ class LogPump:
                 pass
 
         def on_deleted(self, event):
-            logging.debug(event)
+            logger.debug(event)
             if not event.src_path.endswith(".txt"):
                 return
             try:
