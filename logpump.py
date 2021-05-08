@@ -201,19 +201,20 @@ class LogFolder:
 
 class LogPump:
     def __init__(self, callback):
-        self.folderz = {}
         sega = MyDocuments().joinpath("SEGA")
-        for subpath in [
-            'PHANTASYSTARONLINE2/log',
-            'PHANTASYSTARONLINE2_NGS/log',
-            'PHANTASYSTARONLINE2_NGS/log_ngs',
-            'PHANTASYSTARONLINE2_NGS_CBT/log',
-            'PHANTASYSTARONLINE2_NGS_CBT/log_ngs',
-        ]:
-            path = sega.joinpath(subpath)
-            if path.is_dir():
-                self.folderz[path] = LogFolder(path, callback)
-
+        self.folderz = {
+            path: LogFolder(path, callback)
+            for path in map(
+                lambda subpath: sega.joinpath(subpath),
+                [
+                    'PHANTASYSTARONLINE2/log',
+                    'PHANTASYSTARONLINE2_NGS/log',
+                    'PHANTASYSTARONLINE2_NGS/log_ngs',
+                    'PHANTASYSTARONLINE2_NGS_CBT/log',
+                    'PHANTASYSTARONLINE2_NGS_CBT/log_ngs',
+                ]
+            ) if path.is_dir()
+        }
         self.observer = Observer()
         self.observer.schedule(self.Handler(self.folderz),
                                str(sega),
