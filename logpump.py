@@ -8,10 +8,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -78,10 +74,17 @@ class LogFile:
     ログファイルから未読部分を読み取る
     """
 
-    def __init__(self, path, newfile=False):
-        self.path = Path(path)
-        self.pos = 2 if newfile else self.path.stat().st_size  # 2=BOM
+    def __init__(self, path: Path, newfile=False):
+        self.path = path
         self.category = self.cate(self.path.stem)
+
+        # self.pos = 2 if newfile else self.path.stat().st_size  # 2=BOM
+
+        # st_sizeを信用せず、実際に読み進めてposを確定する
+        self.pos = 2  # 2=BOM
+        if not newfile:
+            self.tail()
+
         logger.debug(f'LogFile({self.path.stem}, {newfile}) pos={self.pos}')
 
     @staticmethod
@@ -166,37 +169,45 @@ def seqregurator(callback):
 
 
 class LogFolder:
-    def __init__(self, path, callback):
+    def __init__(self, path: Path, callback):
         logger.debug(f'LogFolder({str(path)})')
         self.path = path
         self.callback = seqregurator(callback)
+        self.logfiles = {
+            path: LogFile(path)
+            for path in self.logs()
+        }
+        self.known = set(self.logfiles.keys())
 
-        logs = list(self.path.glob("*Log*.txt"))
-        categories = set([LogFile.cate(x.stem) for x in logs])
+    def logs(self):
+        logs = list(filter(
+            lambda path: path.stem != "pso2dynamicdownloader_log",
+            self.path.glob("*Log*.txt")))
 
         def newestof(cate):
             logs_cate = filter(lambda x: x.stem.startswith(cate), logs)
             return max(logs_cate)
 
-        self.logfiles = {
-            str(x): LogFile(x) for x in [newestof(cate) for cate in categories]
-        }
+        categories = {LogFile.cate(x.stem) for x in logs}
+
+        return {newestof(cate) for cate in categories}
 
     def scan(self):
+        now = self.logs()
+
+        for path in (now - self.known):
+            self.logfiles[path] = LogFile(path, True)
+            self.known.add(path)
+
         for log in self.logfiles.values():
             for row in csv.reader(log.tail(), dialect=csv.excel_tab):
                 entry = Entry(row, log.category)
                 self.callback(entry)
 
-    def newlog(self, path):
-        self.logfiles[path] = LogFile(path, True)
-
-    def remove(self, path):
-        try:
+        for path in (self.known - now):
             del self.logfiles[path]
+            self.known.discard(path)
             logger.debug('removed ' + path)
-        except KeyError:
-            pass
 
 
 class LogPump:
@@ -215,37 +226,7 @@ class LogPump:
                 ]
             ) if path.is_dir()
         }
-        self.observer = Observer()
-        self.observer.schedule(self.Handler(self.folderz),
-                               str(sega),
-                               recursive=True)
         self.th = threading.Thread(target=self._main, daemon=True)
-
-    class Handler(FileSystemEventHandler):
-        def __init__(self, folderz):
-            self.folderz = folderz
-
-        def on_created(self, event):
-            logger.debug(event)
-            if not event.src_path.endswith(".txt"):
-                return
-            try:
-                folder = self.folderz[Path(event.src_path).parent]
-                folder.newlog(event.src_path)
-            except KeyError:
-                pass
-
-        def on_deleted(self, event):
-            logger.debug(event)
-            if not event.src_path.endswith(".txt"):
-                return
-            try:
-                folder = self.folderz[Path(event.src_path).parent]
-                folder.remove(event.src_path)
-            except KeyError:
-                pass
-
-        on_moved = on_deleted
 
     def _main(self):
         while self.keep_running:
@@ -255,13 +236,10 @@ class LogPump:
 
     def start(self):
         self.keep_running = True
-        self.observer.start()
         self.th.start()
 
     def stop(self):
         self.keep_running = False
-        self.observer.stop()
-        self.observer.join()
         self.th.join()
 
 
