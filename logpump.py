@@ -207,7 +207,7 @@ class LogFolder:
         for path in (self.known - now):
             del self.logfiles[path]
             self.known.discard(path)
-            logger.debug('removed ' + path)
+            logger.debug('removed ' + str(path))
 
 
 class LogPump:
