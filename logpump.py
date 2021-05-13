@@ -102,6 +102,9 @@ class LogFile:
             except (UnicodeError, self.IncompleteLineError) as e:
                 logger.debug(f'{self.path.stem}: {e}')
                 time.sleep(0.5)
+            except Exception as e:
+                logger.debug(f'{self.path.stem}: {e}')
+                return []
 
     def _tail(self) -> list:
         ls = []
@@ -232,7 +235,7 @@ class LogPump:
         while self.keep_running:
             for folder in self.folderz.values():
                 folder.scan()
-            time.sleep(0.3)
+            time.sleep(0.5)
 
     def start(self):
         self.keep_running = True

@@ -2,7 +2,9 @@
 
 import ctypes
 import logging
+import os
 import re
+from pathlib import Path
 
 import colorama
 import playsound
@@ -38,6 +40,10 @@ if len(la_dict()) == 0:
     la_dict.data = misc.load_la_dict_online()
 
 
+def get_config(code, default=True):
+    return default
+
+
 def pushitem(item, num):
     report.put(item, num)
     spitem_check_and_notify(item)
@@ -46,15 +52,17 @@ def pushitem(item, num):
 def report_handler(counter: misc.ItemCounter):
     pairs = counter.sorted_items()
     names = list(map(misc.ItemCounter.pair2name, pairs))
-    for name in names:
-        print(Fore.YELLOW + name)
 
-    if REPORT_ITEM_MAX is not None:
-        n = len(names)
-        if n > REPORT_ITEM_MAX:
-            names = names[:REPORT_ITEM_MAX] + [f"残り{n - REPORT_ITEM_MAX}件省略"]
+    info_print("\n".join(names + ["--"]))
 
-    talk(" ".join(names))
+    # 拾得物を読み上げリポート
+    if get_config(100):
+        if REPORT_ITEM_MAX is not None:
+            n = len(names)
+            if n > REPORT_ITEM_MAX:
+                names = names[:REPORT_ITEM_MAX] + \
+                    [f"残り{n - REPORT_ITEM_MAX}件省略"]
+        talk(" ".join(names))
 
 
 report = misc.DelayedReporter(report_handler)
@@ -64,16 +72,20 @@ def spitem_check_and_notify(item):
     dic = spitem()
 
     if item in dic:
-        talk(item)
+        if get_config(105):
+            talk(item)
         sound = dic[item]
-        play_sound(sound)
+        if get_config(300):
+            play_sound(sound)
         return
 
     if "regexp" in dic:
         for pattern, sound in dic["regexp"]:
             if pattern.match(item):
-                talk(item)
-                play_sound(sound)
+                if get_config(105):
+                    talk(item)
+                if get_config(300):
+                    play_sound(sound)
                 return
 
 
@@ -107,6 +119,10 @@ def chat_print(ent, text):
     print(f"{time} {name} {text}")
 
 
+def info_print(text):
+    print(Fore.YELLOW + text)
+
+
 ##############################################################################
 
 
@@ -124,15 +140,21 @@ def handle_Chat(ent):
         dic = la_dict()
         if cmd in dic:
             la = re.sub(r'^\d+', '', dic[cmd])
-            talk(f'{name}が{la}した')
-            la = ' ' + Fore.RESET + dic[cmd]
-            pyperclip.copy(_.group(0))
+            if get_config(102):
+                talk(f'{name}が{la}した')
+            la = ' ' + dic[cmd]
+            if get_config(201, False):
+                pyperclip.copy(_.group(0))
+            elif get_config(202, False):
+                pyperclip.copy(dic[cmd])
 
     chat_print(ent, mess + la)
 
-    _ = re.search(r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
+    _ = re.search(
+        r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
     if _:
         item = _.group(2)
+    if get_config(103):
         talk(f'{name}が{item}を装備した')
 
     txt = chatcmd.strip(mess)
@@ -143,13 +165,15 @@ def handle_Chat(ent):
 def handle_SymbolChat(ent):
     time, seq, channel, id, name, said = ent[:6]
     chat_print(ent, said)
-    talk(f'{name}のシンボルアート')
+    if get_config(104):
+        talk(f'{name}のシンボルアート')
 
 
 def handle_Reward(ent):
     item, num = ent[5], ent.Num
     pushitem(item, num)
-    pyperclip.copy(item)
+    if get_config(200):
+        pyperclip.copy(item)
 
 
 def handle_Action(ent):
@@ -162,7 +186,7 @@ def handle_Action(ent):
     if act == '[Warehouse-Meseta]':
         return
 
-    if act.startswith('[Pickup-ToWarehouse'):
+    if get_config(301) and act.startswith('[Pickup-ToWarehouse'):
         guard_time = 15
         play_sound("emergency-alert1.mp3", guard_time)
         talk("警告！アイテムパックが満杯です！", guard_time)
@@ -195,10 +219,11 @@ def handle_Amusement(ent):
     c = casinocounter
     c.update(bet, ret)
 
-    if ret:
-        bouyomichan.talk(f"{ret}枚当たり 累計{c.income} ヒット率{c.hitrate:.3f}")
-    elif c.defeats > 2:
-        bouyomichan.talk(f'{c.defeats}連敗 ')
+    if get_config(101):
+        if ret:
+            bouyomichan.talk(f"{ret}枚当たり 累計{c.income} ヒット率{c.hitrate:.3f}")
+        elif c.defeats > 2:
+            bouyomichan.talk(f'{c.defeats}連敗 ')
 
     meter = '#' * c.defeats + '_' * (c.defeats_max - c.defeats)
 
@@ -216,6 +241,8 @@ def on_entry(ent):
 
 
 def main():
+    os.chdir(Path(__file__).parent)
+
     ctypes.windll.kernel32.SetConsoleTitleW(f"PSO2LogReader {VERSION}")
     pump = logpump.LogPump(on_entry)
     pump.start()
