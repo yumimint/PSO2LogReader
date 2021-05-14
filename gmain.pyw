@@ -104,7 +104,7 @@ class ConfigUI(tk.Frame):
     def on_click(self, event):
         self.last_code = event.widget.ud_code
 
-    def check(self, code, **kwargs):
+    def check(self, code, *args):
         return self.boolvars[code][1]
 
     def checkbox_modified(self):
@@ -248,8 +248,7 @@ class App(tk.Tk):
                 ent = q.get()
                 Main.on_entry(ent)
                 if ent.category == "Amusement":
-                    bet, ret, before, after = map(int, ent[5:9])
-                    ccy.append(after)
+                    ccy.append(int(ent[-2]))
                     CasinoCoinFig.plot(range(len(ccy)), ccy)
 
             time.sleep(0.1)
