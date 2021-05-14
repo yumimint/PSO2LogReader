@@ -154,8 +154,8 @@ def handle_Chat(ent):
         r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
     if _:
         item = _.group(2)
-    if get_config(103):
-        talk(f'{name}が{item}を装備した')
+        if get_config(103):
+            talk(f'{name}が{item}を装備した')
 
     txt = chatcmd.strip(mess)
     if txt:
