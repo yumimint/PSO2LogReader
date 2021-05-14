@@ -9,6 +9,9 @@ from pathlib import Path
 from tkinter import ttk
 from tkinter.font import Font
 
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
 import logpump
 import main as Main
 
@@ -18,16 +21,15 @@ logger = logging.getLogger(__name__)
 class LogView(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(0, weight=1)
-        self.grid(sticky="news")
+        # self.rowconfigure(0, weight=1)
+        # self.columnconfigure(0, weight=1)
         self.createWidget()
-        self.q = queue.Queue()
+        self.q = queue.Queue()  # スレッドセーフにするためのキュー
 
     def createWidget(self):
         text = tk.Text(self)
         text.configure(bg='black', fg='white')
-        text.pack(side="left", fill="both")
+        text.grid(row=0, column=0, sticky="news")
 
         for name, color in [
             ('PUBLIC', '#ffffff'),
@@ -40,13 +42,10 @@ class LogView(tk.Frame):
             text.tag_configure(name, foreground=color)
 
         ysb = ttk.Scrollbar(self, orient='vertical', command=text.yview)
-        # ysb.grid(row=0, column=1, sticky="ns")
-        ysb.pack(side="right", fill="y")
+        ysb.grid(row=0, column=1, sticky="ns")
 
         text.configure(yscrollcommand=ysb.set,
                        font=Font(family='メイリオ', size=12))
-
-        self.pack(fill="both")
 
         self.text = text
         self.ysb = ysb
@@ -67,96 +66,110 @@ class LogView(tk.Frame):
 
 
 class ConfigUI(tk.Frame):
-    singleton = None
-
     itemz = [
-        ('拾得物を読み上げ', 100),
-        ('カジノ遊戯の状況を読み上げ', 101),
-        ('ロビアクを読み上げ', 102),
-        ('装備を読み上げ', 103),
-        ('シンボルアートを読み上げ', 104),
-        ('報酬アイテム名をクリップボードへコピー', 200),
-        ('ロビアクのコマンドをクリップボードへコピー', 201),
-        ('ロビアクのチケット名をクリップボードへコピー', 202),
-        ('特定アイテムを獲得した時にサウンドを再生', 300),
-        ('特定アイテムを獲得した時に読み上げ', 105),
-        ('倉庫送りを検出した時に警告サウンドを再生', 301),
+        # (code, text)
+        (100, '拾得物を読み上げ'),
+        (101, 'カジノ遊戯の状況を読み上げ'),
+        (102, 'ロビアクを読み上げ'),
+        (103, '装備を読み上げ'),
+        (104, 'シンボルアートを読み上げ'),
+        (200, '報酬アイテム名をクリップボードへコピー'),
+        (201, 'ロビアクのコマンドをクリップボードへコピー'),
+        (202, 'ロビアクのチケット名をクリップボードへコピー'),
+        (300, '特定アイテムを獲得した時にサウンドを再生'),
+        (105, '特定アイテムを獲得した時に読み上げ'),
+        (301, '倉庫送りを検出した時に警告サウンドを再生'),
     ]
 
     exclusion = [{201, 202}]
+    config_path = Path(__file__).with_name("config.json")
 
     def __init__(self, master):
-        ConfigUI.singleton = self
         super(ConfigUI, self).__init__(master)
 
         self.boolvars = {}
-        self.boolvars2 = {}
         for row, iten in enumerate(self.itemz):
-            text, code = iten
+            code, text = iten
             bv = tk.BooleanVar()
             cb = tk.Checkbutton(
-                self, text=text, variable=bv, command=self.test)
-            cb.grid(column=0, row=row, sticky="w")
+                self, text=text, variable=bv, command=self.checkbox_modified)
+            cb.grid(column=0, row=row, sticky="w", ipadx=8)
             setattr(cb, "ud_code", code)
             cb.bind("<1>", self.on_click)
-            self.boolvars[code] = bv
-            self.boolvars2[code] = False
+            self.boolvars[code] = [bv, False]
 
-        self.pack(fill="both")
-        self.load_config()
-
-    last_code = 0
+        self.pack(expand=1)
+        self.load()
 
     def on_click(self, event):
         self.last_code = event.widget.ud_code
 
     def check(self, code, **kwargs):
-        return self.boolvars2[code]
+        return self.boolvars[code][1]
 
-    def test(self):
+    def checkbox_modified(self):
         code = self.last_code
+        v = self.boolvars[code]
+        v[1] = v[0].get()
 
-        if self.boolvars[code].get():
+        # 排他制御
+        if v[1]:
             for xset in self.exclusion:
                 if code in xset:
                     for xcode in xset - {code}:
-                        self.boolvars[xcode].set(False)
-                        self.boolvars2[xcode] = False
+                        v = self.boolvars[xcode]
+                        v[0].set(False)
+                        v[1] = False
 
-        # print(f"{code}:", "on" if self.check(code) else "off")
-        for key, var in self.boolvars.items():
-            self.boolvars2[key] = var.get()
-
-    config_path = Path(__file__).with_name("config.json")
-
-    def save_config(self):
+    def save(self):
+        obj = {
+            "on": [code
+                   for code in self.boolvars.keys()
+                   if self.boolvars[code][1]]
+        }
         with self.config_path.open("wt", encoding="utf-8") as fp:
-            obj = {
-                "on": [code
-                       for code in self.boolvars2.keys()
-                       if self.boolvars2[code]]
-            }
             json.dump(obj, fp)
 
-    def load_config(self):
+    def load(self):
         try:
             with self.config_path.open("rt", encoding="utf-8") as fp:
                 obj = json.load(fp)
         except FileNotFoundError:
             return
 
-        print(obj)
-
         for code in obj["on"]:
             try:
-                self.boolvars[code].set(True)
-                self.boolvars2[code] = True
+                self.boolvars[code][0].set(True)
+                self.boolvars[code][1] = True
             except KeyError:
                 pass
 
 
-class App(tk.Tk):
+class CasinoCoinFig(tk.Frame):
+    singleton = None
 
+    def __init__(self, master):
+        CasinoCoinFig.singleton = self
+        super(CasinoCoinFig, self).__init__(master)
+
+        fig = Figure()
+        canvas = FigureCanvasTkAgg(fig, self)
+        self.canvas = canvas
+
+        self.plt = fig.add_subplot(111)
+        # self.toolbar = NavigationToolbar2Tk(canvas, self)
+        # self.toolbar.update()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.pack(expand=1)
+
+    @classmethod
+    def plot(cls, *args):
+        self = cls.singleton
+        self.plt.plot(*args)
+        self.canvas.draw()
+
+
+class App(tk.Tk):
     viewz = [
         ('ALL', '全て'),
         ('PUBLIC', '周囲'),
@@ -171,29 +184,31 @@ class App(tk.Tk):
         super(App, self).__init__()
         self.title('PSO2LogReadr')
         # self.geometry('400x600')
+        self.createWidget()
         self.protocol("WM_DELETE_WINDOW", self.close_window)
+        setattr(Main, "get_config", self.config.check)
+        setattr(Main, "chat_print", self.chat_print)
+        setattr(Main, "info_print", self.info_print)
 
+    def createWidget(self):
+        frame = self
         self.view = {}
 
-        notebook = ttk.Notebook(self)
+        notebook = ttk.Notebook(frame)
+
         for tag, name in self.viewz:
             view = LogView(notebook)
             notebook.add(view, text=name)
             self.view[tag] = view
 
-        config = ConfigUI(notebook)
-        self.config = config
-        notebook.add(config, text="設定")
-        notebook.pack(fill="both")
+        self.ccfig = CasinoCoinFig(notebook)
+        notebook.add(self.ccfig, text="カジノ")
 
-        # self.sv = sv = tk.StringVar()
-        # tk.Label(self, bd=1, textvariable=sv,
-        #          relief=tk.SUNKEN, anchor=tk.W).pack(side=tk.BOTTOM, fill=tk.X)
-        # statusbar.grid(row=1, column=0, sticky="we")
+        self.config = ConfigUI(notebook)
+        notebook.add(self.config, text="設定")
 
-        setattr(Main, "get_config", config.check)
-        setattr(Main, "chat_print", self.chat_print)
-        setattr(Main, "info_print", self.info_print)
+        notebook.enable_traversal()
+        notebook.pack(expand=1)
 
     def close_window(self):
         self.keep_running = False
@@ -219,6 +234,7 @@ class App(tk.Tk):
         pump = logpump.LogPump(q.put)
         pump.start()
         Main.report.start()
+        ccy = []
 
         self.keep_running = True
         while self.keep_running:
@@ -228,21 +244,25 @@ class App(tk.Tk):
             for view in self.view.values():
                 view.update()
 
-            if not q.empty():
-                Main.on_entry(q.get())
+            while not q.empty():
+                ent = q.get()
+                Main.on_entry(ent)
+                if ent.category == "Amusement":
+                    bet, ret, before, after = map(int, ent[5:9])
+                    ccy.append(after)
+                    CasinoCoinFig.plot(range(len(ccy)), ccy)
 
-            time.sleep(0.2)
-            # self.sv.set(datetime.datetime.now())
+            time.sleep(0.1)
 
         self.destroy()
         Main.report.stop()
         pump.stop()
-        self.config.save_config()
+        self.config.save()
 
 
 def main():
     os.chdir(Path(__file__).parent)
-
+    ctypes.windll.kernel32.SetConsoleTitleW("PSO2LogReader")
     appmtx = ctypes.windll.kernel32.CreateMutexW(None, False, 'PSO2LogReadr')
 
     if ctypes.windll.kernel32.GetLastError() != 0:
