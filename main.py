@@ -1,37 +1,16 @@
-# %%
-
-import ctypes
 import logging
-import os
 import re
-from pathlib import Path
 
-import colorama
 import playsound
 import pyperclip
-from colorama import Fore
 
 import bouyomichan
 import chatcmd
-import logpump
 import misc
 
-VERSION = "ver 210504"
+logger = logging.getLogger(__name__)
 
 REPORT_ITEM_MAX = 10
-
-colorama.init(autoreset=True)
-
-logging.basicConfig(level=logging.INFO, format='\
-%(levelname)s : %(asctime)s : %(message)s')
-
-ChatColors = {
-    'PUBLIC': 'WHITE',
-    'GROUP': 'GREEN',
-    'REPLY': 'MAGENTA',
-    'GUILD': 'LIGHTRED_EX',
-    'PARTY': 'CYAN',
-}
 
 casinocounter = misc.CasinoCounter()
 spitem = misc.UsersFile("spitem.txt", misc.spitem_loader)
@@ -40,8 +19,20 @@ if len(la_dict()) == 0:
     la_dict.data = misc.load_la_dict_online()
 
 
-def get_config(code, default=True):
-    return default
+def chat_print(ent, text):
+    pass
+
+
+def info_print(text):
+    pass
+
+
+def casino_stateus(text):
+    pass
+
+
+def get_config(code):
+    return False
 
 
 def pushitem(item, num):
@@ -103,26 +94,6 @@ def play_sound(sound, guard_time=1):
         playsound.playsound(sound, block=False)
 
 
-def chat_print(ent, text):
-    time, seq, channel, id, name = ent[:5]
-
-    time = time[-8:]
-    channel = 'GROUP' if channel == 'CHANNEL' else channel
-    try:
-        col = ChatColors[channel]
-    except IndexError:
-        col = 'RESET'
-
-    # name = getattr(Back, col) + Fore.BLACK + name + Style.RESET_ALL
-    text = getattr(Fore, col) + text
-
-    print(f"{time} {name} {text}")
-
-
-def info_print(text):
-    print(Fore.YELLOW + text)
-
-
 ##############################################################################
 
 
@@ -143,9 +114,9 @@ def handle_Chat(ent):
             if get_config(102):
                 talk(f'{name}が{la}した')
             la = ' ' + dic[cmd]
-            if get_config(201, False):
+            if get_config(201):
                 pyperclip.copy(_.group(0))
-            elif get_config(202, False):
+            elif get_config(202):
                 pyperclip.copy(dic[cmd])
 
     chat_print(ent, mess + la)
@@ -225,41 +196,15 @@ def handle_Amusement(ent):
         elif c.defeats > 2:
             bouyomichan.talk(f'{c.defeats}連敗 ')
 
-    meter = '#' * c.defeats + '_' * (c.defeats_max - c.defeats)
-
-    title = f"PSO2LogReader {VERSION} -- {meter} HitRate({c.hitrate:.3f}) ReturnRate({c.rate:.2f}) In({c.income:,})"
-    ctypes.windll.kernel32.SetConsoleTitleW(title)
+    meter = '■' * c.defeats + '□' * (c.defeats_max - c.defeats)
+    casino_stateus(
+        f"{meter} HitRate({c.hitrate:.3f}) "
+        f"ReturnRate({c.rate:.2f}) Income({c.income:,})")
 
 
 def on_entry(ent):
-    # print(ent)
     g = globals()
     name = 'handle_' + ent.category
     if name in g:
         fn = g[name]
         fn(ent)
-
-
-def main():
-    os.chdir(Path(__file__).parent)
-
-    ctypes.windll.kernel32.SetConsoleTitleW(f"PSO2LogReader {VERSION}")
-    pump = logpump.LogPump(on_entry)
-    pump.start()
-    report.start()
-    print(Fore.GREEN + "START")
-    try:
-        while True:
-            line = input().strip()
-            if line == "exit":
-                break
-    except KeyboardInterrupt:
-        pass
-    pump.stop()
-    report.stop()
-    print("done")
-
-
-# %%
-if __name__ == "__main__":
-    main()

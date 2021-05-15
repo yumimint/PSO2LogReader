@@ -1,35 +1,50 @@
+from asyncio import runners
 import ctypes.wintypes
 import json
 import logging
 import os
 import queue
-import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
-from tkinter.font import Font
 
+# import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 import logpump
 import main as Main
 
+# from tkinter.font import Font
+
+
+# matplotlib.use('TkAgg')
 logger = logging.getLogger(__name__)
+
+config_path = Path(__file__).with_name("config.json")
+
+try:
+    with config_path.open("rt", encoding="utf-8") as fp:
+        config_obj = json.load(fp)
+    del fp
+except FileNotFoundError:
+    config_obj = {"on": [100, 101, 102, 103, 104, 300, 105, 301]}
 
 
 class LogView(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        # self.rowconfigure(0, weight=1)
-        # self.columnconfigure(0, weight=1)
-        self.createWidget()
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+        self.grid(sticky=tk.NSEW)
         self.q = queue.Queue()  # スレッドセーフにするためのキュー
 
-    def createWidget(self):
-        text = tk.Text(self)
-        text.configure(bg='black', fg='white')
-        text.grid(row=0, column=0, sticky="news")
+        text = tk.Text(self,
+                       state='disabled',
+                       foreground="white",
+                       background="black",
+                       )
+        text.grid(row=0, column=0, sticky=tk.NSEW)
 
         for name, color in [
             ('PUBLIC', '#ffffff'),
@@ -42,13 +57,30 @@ class LogView(tk.Frame):
             text.tag_configure(name, foreground=color)
 
         ysb = ttk.Scrollbar(self, orient='vertical', command=text.yview)
-        ysb.grid(row=0, column=1, sticky="ns")
-
-        text.configure(yscrollcommand=ysb.set,
-                       font=Font(family='メイリオ', size=12))
+        text.configure(yscrollcommand=ysb.set)
+        ysb.grid(row=0, column=1, sticky=tk.NS)
 
         self.text = text
         self.ysb = ysb
+
+        # self.popup_menu = tk.Menu(text, tearoff=0)
+        # self.popup_menu.add_command(label="ログを消去",
+        #                             command=self.delete_selected)
+        # self.popup_menu.add_command(label="Select All",
+        #                             command=self.select_all)
+        # text.bind("<Button-3>", self.popup)
+
+    def popup(self, event):
+        try:
+            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.popup_menu.grab_release()
+
+    # def delete_selected(self):
+    #     self.text.delete("end")
+
+    # def select_all(self):
+    #     print(self.text.info())
 
     def append(self, text, tag):
         self.q.put((text, tag))
@@ -82,7 +114,6 @@ class ConfigUI(tk.Frame):
     ]
 
     exclusion = [{201, 202}]
-    config_path = Path(__file__).with_name("config.json")
 
     def __init__(self, master):
         super(ConfigUI, self).__init__(master)
@@ -99,12 +130,13 @@ class ConfigUI(tk.Frame):
             self.boolvars[code] = [bv, False]
 
         self.pack(expand=1)
-        self.load()
+        self.load(config_obj)
 
     def on_click(self, event):
         self.last_code = event.widget.ud_code
 
-    def check(self, code, *args):
+    def check(self, code):
+        # スレッドセーフ
         return self.boolvars[code][1]
 
     def checkbox_modified(self):
@@ -121,22 +153,14 @@ class ConfigUI(tk.Frame):
                         v[0].set(False)
                         v[1] = False
 
-    def save(self):
-        obj = {
-            "on": [code
-                   for code in self.boolvars.keys()
-                   if self.boolvars[code][1]]
-        }
-        with self.config_path.open("wt", encoding="utf-8") as fp:
-            json.dump(obj, fp)
+    def store(self, obj):
+        obj["on"] = [
+            code
+            for code in self.boolvars.keys()
+            if self.boolvars[code][1]
+        ]
 
-    def load(self):
-        try:
-            with self.config_path.open("rt", encoding="utf-8") as fp:
-                obj = json.load(fp)
-        except FileNotFoundError:
-            return
-
+    def load(self, obj):
         for code in obj["on"]:
             try:
                 self.boolvars[code][0].set(True)
@@ -152,21 +176,46 @@ class CasinoCoinFig(tk.Frame):
         CasinoCoinFig.singleton = self
         super(CasinoCoinFig, self).__init__(master)
 
+        statusline = tk.StringVar()
+        setattr(Main, "casino_stateus", lambda text: statusline.set(text))
+        self.label = tk.Label(self, textvariable=statusline,
+                              bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        self.label.pack(side=tk.BOTTOM, fill=tk.X)
+
         fig = Figure()
         canvas = FigureCanvasTkAgg(fig, self)
         self.canvas = canvas
 
-        self.plt = fig.add_subplot(111)
+        self.plt1 = fig.add_subplot(2, 1, 1)
+        self.plt1.set_ylabel("INCOME")
+
+        self.plt2 = fig.add_subplot(2, 1, 2)
+        self.plt2.set_ylabel("HIT RATE")
+
         # self.toolbar = NavigationToolbar2Tk(canvas, self)
         # self.toolbar.update()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.pack(expand=1)
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.pack(expand=True)
 
-    @classmethod
-    def plot(cls, *args):
-        self = cls.singleton
-        self.plt.plot(*args)
-        self.canvas.draw()
+        self.cc_reset()
+
+    def cc_reset(self):
+        self.income = []
+        self.hitrate = []
+        self.cccount = None
+
+    def update(self, cc):
+        if self.cccount != cc.count:
+            if cc.count == 0:
+                self.cc_reset()
+
+            self.cccount = cc.count
+            self.income.append(cc.income)
+            self.hitrate.append(cc.hitrate)
+
+            self.plt1.plot(range(len(self.income)), self.income)
+            self.plt2.plot(range(len(self.hitrate)), self.hitrate)
+            self.canvas.draw()
 
 
 class App(tk.Tk):
@@ -183,18 +232,16 @@ class App(tk.Tk):
     def __init__(self):
         super(App, self).__init__()
         self.title('PSO2LogReadr')
-        # self.geometry('400x600')
-        self.createWidget()
-        self.protocol("WM_DELETE_WINDOW", self.close_window)
-        setattr(Main, "get_config", self.config.check)
-        setattr(Main, "chat_print", self.chat_print)
-        setattr(Main, "info_print", self.info_print)
+        try:
+            self.geometry(config_obj["geometry"])
+        except KeyError:
+            pass
+        self.protocol("WM_DELETE_WINDOW", self._close)
 
-    def createWidget(self):
-        frame = self
         self.view = {}
-
-        notebook = ttk.Notebook(frame)
+        notebook = ttk.Notebook(self)
+        notebook.enable_traversal()
+        notebook.pack(fill=tk.BOTH, expand=True)
 
         for tag, name in self.viewz:
             view = LogView(notebook)
@@ -207,14 +254,17 @@ class App(tk.Tk):
         self.config = ConfigUI(notebook)
         notebook.add(self.config, text="設定")
 
-        notebook.enable_traversal()
-        notebook.pack(expand=1)
+        setattr(Main, "get_config", self.config.check)
+        setattr(Main, "chat_print", self.chat_print)
+        setattr(Main, "info_print", self.info_print)
 
-    def close_window(self):
+    def _close(self):
         self.keep_running = False
+        self.config.store(config_obj)
+        config_obj["geometry"] = self.geometry()
 
     def chat_print(self, ent, text):
-        time, seq, channel, id, name = ent[:5]
+        time, seq, channel, id, name = ent[: 5]
 
         time = time[-8:]
         channel = 'GROUP' if channel == 'CHANNEL' else channel
@@ -234,12 +284,10 @@ class App(tk.Tk):
         pump = logpump.LogPump(q.put)
         pump.start()
         Main.report.start()
-        ccy = []
 
         self.keep_running = True
-        while self.keep_running:
-            self.update()
 
+        def loop():
             # viewに溜まったqueueを処理する
             for view in self.view.values():
                 view.update()
@@ -248,15 +296,19 @@ class App(tk.Tk):
                 ent = q.get()
                 Main.on_entry(ent)
                 if ent.category == "Amusement":
-                    ccy.append(int(ent[-2]))
-                    CasinoCoinFig.plot(range(len(ccy)), ccy)
+                    self.ccfig.update(Main.casinocounter)
 
-            time.sleep(0.1)
+            if self.keep_running:
+                self.after(500, loop)
+            else:
+                self.destroy()
 
-        self.destroy()
+        self.after(500, loop)
+
+        super(App, self).mainloop()
+
         Main.report.stop()
         pump.stop()
-        self.config.save()
 
 
 def main():
@@ -270,6 +322,9 @@ def main():
         exit(1)
 
     App().mainloop()
+
+    with config_path.open("wt", encoding="utf-8") as fp:
+        json.dump(config_obj, fp)
 
     ctypes.windll.kernel32.ReleaseMutex(appmtx)
 

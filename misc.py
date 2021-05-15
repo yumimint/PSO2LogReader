@@ -1,9 +1,11 @@
+import collections
 import csv
 import heapq
 import io
 import logging
 import pathlib
 import re
+import statistics
 import threading
 import time
 import urllib.request
@@ -103,11 +105,12 @@ class TalkativesDetector:
     def forget(self, expiry):
         heap = self.heap
         while heap and heap[0][0] < expiry:
-            heapq.heappop(heap)[1]
+            heapq.heappop(heap)
 
 
 class CasinoCounter:
     def __init__(self):
+        self.deq = collections.deque(maxlen=30)
         self.reset()
 
     def reset(self):
@@ -117,11 +120,13 @@ class CasinoCounter:
         self.hit = 0
         self.defeats = 0
         self.defeats_max = 0
+        self.deq.clear()
 
     def update(self, bet, ret):
         self.count += 1
         self.bet += bet
         self.ret += ret
+        self.deq.append(max(1, ret))
         if ret == 0:
             self.defeats += 1
             self.defeats_max = max(self.defeats_max, self.defeats)
@@ -139,7 +144,8 @@ class CasinoCounter:
     def hitrate(self):
         if self.count == 0:
             return 0
-        return self.hit / self.count
+        # return self.hit / self.count
+        return statistics.mean(self.deq)
 
     @property
     def income(self):
