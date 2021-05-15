@@ -126,7 +126,7 @@ class CasinoCounter:
         self.count += 1
         self.bet += bet
         self.ret += ret
-        self.deq.append(max(1, ret))
+        self.deq.append(min(1, ret))
         if ret == 0:
             self.defeats += 1
             self.defeats_max = max(self.defeats_max, self.defeats)
