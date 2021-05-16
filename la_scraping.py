@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 os.chdir(Path(__file__).parent)
 
-la_rex = re.compile(r"/la ?([\da-zA-Z_+']+)")
+la_rex = re.compile(r"/la ?([\da-zA-Z_+\-']+)")
 brackets_rex = re.compile(r'(\d+)「(.+)」')
 zen2han_alpha = str.maketrans(
     {chr(0xFF01 + i): chr(0x21 + i) for i in range(93)})
