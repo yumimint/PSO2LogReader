@@ -1,4 +1,3 @@
-from asyncio import runners
 import ctypes.wintypes
 import json
 import logging
@@ -175,47 +174,66 @@ class CasinoCoinFig(tk.Frame):
     def __init__(self, master):
         CasinoCoinFig.singleton = self
         super(CasinoCoinFig, self).__init__(master)
+        self.pack(expand=True)
 
+        # ステータスバー
         statusline = tk.StringVar()
         setattr(Main, "casino_stateus", lambda text: statusline.set(text))
         self.label = tk.Label(self, textvariable=statusline,
                               bd=1, relief=tk.SUNKEN, anchor=tk.W)
         self.label.pack(side=tk.BOTTOM, fill=tk.X)
 
-        fig = Figure()
-        canvas = FigureCanvasTkAgg(fig, self)
-        self.canvas = canvas
+        # matplotlib
+        self.fig = Figure()
+        self.canvas = FigureCanvasTkAgg(self.fig, self)
+        widget = self.canvas.get_tk_widget()
 
-        self.plt1 = fig.add_subplot(2, 1, 1)
-        self.plt1.set_ylabel("INCOME")
+        widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        self.plt2 = fig.add_subplot(2, 1, 2)
-        self.plt2.set_ylabel("HIT RATE")
-
-        # self.toolbar = NavigationToolbar2Tk(canvas, self)
+        # self.toolbar = NavigationToolbar2Tk(self.canvas, self)
         # self.toolbar.update()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self.pack(expand=True)
+
+        # context menu
+        self.popup_menu = tk.Menu(widget, tearoff=0)
+        self.popup_menu.add_command(label="カウンタをリセット",
+                                    command=Main.casinocounter.reset)
+        self.popup_menu.add_command(label="グラフをリセット",
+                                    command=self.cc_reset)
+        widget.bind("<Button-3>", self.popup)
 
         self.cc_reset()
+
+    def popup(self, event):
+        try:
+            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.popup_menu.grab_release()
 
     def cc_reset(self):
         self.income = []
         self.hitrate = []
         self.cccount = None
+        self.draw()
 
-    def update(self, cc):
+    def update(self):
+        cc = Main.casinocounter
         if self.cccount != cc.count:
-            if cc.count == 0:
-                self.cc_reset()
-
             self.cccount = cc.count
             self.income.append(cc.income)
             self.hitrate.append(cc.hitrate)
+            self.draw()
 
-            self.plt1.plot(range(len(self.income)), self.income)
-            self.plt2.plot(range(len(self.hitrate)), self.hitrate)
-            self.canvas.draw()
+    def draw(self):
+        fig = self.fig
+        fig.clear()
+        plt1 = fig.add_subplot(211)
+        plt2 = fig.add_subplot(212)
+        plt1.set_ylabel("INCOME")
+        plt2.set_ylabel("HIT RATE")
+        plt1.plot(range(len(self.income)), self.income, "red")
+        plt2.plot(range(len(self.hitrate)), self.hitrate, "blue")
+        fig.canvas.draw()
+        fig.canvas.flush_events()
 
 
 class App(tk.Tk):
@@ -288,15 +306,15 @@ class App(tk.Tk):
         self.keep_running = True
 
         def loop():
+            while not q.empty():
+                ent = q.get()
+                Main.on_entry(ent)
+
             # viewに溜まったqueueを処理する
             for view in self.view.values():
                 view.update()
 
-            while not q.empty():
-                ent = q.get()
-                Main.on_entry(ent)
-                if ent.category == "Amusement":
-                    self.ccfig.update(Main.casinocounter)
+            self.ccfig.update()
 
             if self.keep_running:
                 self.after(500, loop)

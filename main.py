@@ -100,26 +100,19 @@ def play_sound(sound, guard_time=1):
 def handle_Chat(ent):
     time, seq, channel, id, name, mess = ent[:6]
 
-    if channel == 'PARTY' and casinocounter.count:
-        casinocounter.reset()
-        # talk('カウンタをリセットしました')
-
     _ = re.search(r'/[cmf]?la +([^ ]+)', mess)
-    la = ''
     if _:
         cmd = _.group(1)
         dic = la_dict()
         if cmd in dic:
+            mess += ' ' + dic[cmd]
             la = re.sub(r'^\d+', '', dic[cmd])
             if get_config(102):
                 talk(f'{name}が{la}した')
-            la = ' ' + dic[cmd]
             if get_config(201):
                 pyperclip.copy(_.group(0))
             elif get_config(202):
                 pyperclip.copy(dic[cmd])
-
-    chat_print(ent, mess + la)
 
     _ = re.search(
         r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
@@ -131,6 +124,8 @@ def handle_Chat(ent):
     txt = chatcmd.strip(mess)
     if txt:
         talk(f'{name}「{txt}」')
+
+    chat_print(ent, mess)
 
 
 def handle_SymbolChat(ent):
