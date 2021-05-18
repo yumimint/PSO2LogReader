@@ -14,9 +14,9 @@ import urllib.request
 class UsersFile:
     data = {}
 
-    def __init__(self, path, loader):
+    def __init__(self, filename, loader):
         self.mtime = 0
-        self.path = pathlib.Path(path)
+        self.path = pathlib.Path(__file__).with_name(filename)
         self.loader = loader
 
     def __call__(self):
@@ -30,47 +30,64 @@ class UsersFile:
         return self.data
 
 
-def spitem_loader(path):
-    """spitem.txtをパースする"""
-    rex = set()
-    dic = {"regexp": rex}
-    current_audio = None
-    with path.open(encoding="utf-8") as f:
-        for line in f.readlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if line.startswith("[") and line.endswith("]"):
-                current_audio = line[1:-1]
-                continue
-            if line.startswith("/") and line.endswith("/"):
-                pattern = re.compile(line[1:-1])
-                rex.add((pattern, current_audio))
-                continue
-
-            dic[line] = current_audio
-    logging.info(str(path) + " loaded")
-    return dic
+class SpItem(dict):
+    @classmethod
+    def load(cls, path):
+        self = cls()
+        self.rex = set()
+        self.sounds = set()
+        current_audio = None
+        with path.open(encoding="utf-8") as f:
+            for line in f.readlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line.startswith("[") and line.endswith("]"):
+                    current_audio = line[1:-1]
+                    self.sounds.add(current_audio)
+                    continue
+                if line.startswith("/") and line.endswith("/"):
+                    pattern = re.compile(line[1:-1])
+                    self.rex.add((pattern, current_audio))
+                    continue
+                self[line] = current_audio
+        logging.info(str(path) + " loaded")
+        return self
 
 
 def la_dict_loader(path):
     with path.open(encoding='utf-8') as f:
-        dic = read_la_dict(f)
+        dic = LaDict.load(f)
     logging.info(str(path) + " loaded")
     return dic
 
 
-def read_la_dict(f):
-    dic = {}
-    f.readline()  # skip header line
-    for row in csv.reader(f):
-        if len(row) < 2:
-            continue
-        name, cmd = row[:2]
-        if not cmd:
-            continue
-        dic[cmd] = name
-    return dic
+class LaDict(dict):
+    @classmethod
+    def load(cls, f):
+        dic = cls()
+        loop = []
+        reaction = []
+        notrade = []
+        f.readline()  # skip header line
+        for row in csv.reader(f):
+            # 0:名称 1:コマンド 2:ループ 3:リアクション対応 4:トレード不可 5:入手
+            if len(row) < 4:
+                continue
+            name, cmd = row[:2]
+            if not cmd:
+                continue
+            dic[cmd] = name
+            if row[2] == "1":
+                loop.append(cmd)
+            if row[3] == "1" and cmd != "reaction":
+                reaction.append(cmd)
+            if row[4] == "1":
+                notrade.append(cmd)
+        dic.loop = frozenset(loop)
+        dic.reaction = frozenset(reaction)
+        dic.notrade = frozenset(notrade)
+        return dic
 
 
 def load_la_dict_online():
@@ -85,7 +102,7 @@ def load_la_dict_online():
         logging.warning(e)
         return {}
 
-    return read_la_dict(f)
+    return LaDict.load(f)
 
 
 class TalkativesDetector:

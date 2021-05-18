@@ -1,8 +1,8 @@
 import ctypes.wintypes
 import json
 import logging
-import os
 import queue
+from ssl import OPENSSL_VERSION
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
@@ -27,7 +27,10 @@ try:
         config_obj = json.load(fp)
     del fp
 except FileNotFoundError:
-    config_obj = {"on": [100, 101, 102, 103, 104, 300, 105, 301]}
+    config_obj = {
+        "on": [100, 101, 102, 103, 104, 300, 105, 301],
+        "volume": 0.25,
+    }
 
 
 class LogView(tk.Frame):
@@ -96,15 +99,16 @@ class LogView(tk.Frame):
                 self.text.see('end')
 
 
-class ConfigUI(tk.Frame):
+class ConfigUI(ttk.Frame):
     itemz = [
         # (code, text)
-        (100, '拾得物を読み上げ'),
+        (100, '獲得したメセタ・アイテムを集計して読み上げ'),
         (101, 'カジノ遊戯の状況を読み上げ'),
         (102, 'ロビアクを読み上げ'),
         (103, '装備を読み上げ'),
         (104, 'シンボルアートを読み上げ'),
         (200, '報酬アイテム名をクリップボードへコピー'),
+        (203, 'リアクション対応ロビアクを見つけたら"/la reaction"をクリップボードへコピー'),
         (201, 'ロビアクのコマンドをクリップボードへコピー'),
         (202, 'ロビアクのチケット名をクリップボードへコピー'),
         (300, '特定アイテムを獲得した時にサウンドを再生'),
@@ -118,17 +122,25 @@ class ConfigUI(tk.Frame):
         super(ConfigUI, self).__init__(master)
 
         self.boolvars = {}
+        frame = ttk.Frame(self)
         for row, iten in enumerate(self.itemz):
             code, text = iten
             bv = tk.BooleanVar()
             cb = tk.Checkbutton(
-                self, text=text, variable=bv, command=self.checkbox_modified)
-            cb.grid(column=0, row=row, sticky="w", ipadx=8)
+                frame, text=text, variable=bv, command=self.checkbox_modified)
+            cb.grid(column=0, row=row, sticky="w")
             setattr(cb, "ud_code", code)
             cb.bind("<1>", self.on_click)
             self.boolvars[code] = [bv, False]
+        frame.pack(fill=tk.X)
 
-        self.pack(expand=1)
+        ttk.Label(self, text="音量").pack(side=tk.LEFT)
+        self.vol = tk.DoubleVar()
+        ttk.Scale(self, variable=self.vol).pack(side=tk.LEFT)
+        ttk.Button(self, text="サウンドテスト",
+                   command=Main.sound_test).pack(side=tk.LEFT)
+
+        self.pack(expand=True)
         self.load(config_obj)
 
     def on_click(self, event):
@@ -158,6 +170,7 @@ class ConfigUI(tk.Frame):
             for code in self.boolvars.keys()
             if self.boolvars[code][1]
         ]
+        obj["volume"] = self.vol.get()
 
     def load(self, obj):
         for code in obj["on"]:
@@ -166,6 +179,8 @@ class ConfigUI(tk.Frame):
                 self.boolvars[code][1] = True
             except KeyError:
                 pass
+        if "volume" in obj:
+            self.vol.set(obj["volume"])
 
 
 class CasinoCoinFig(tk.Frame):
@@ -250,6 +265,7 @@ class App(tk.Tk):
     def __init__(self):
         super(App, self).__init__()
         self.title('PSO2LogReadr')
+        self.iconbitmap(Path(__file__).with_name("PSO2LogReader.ico"))
         try:
             self.geometry(config_obj["geometry"])
         except KeyError:
@@ -273,6 +289,7 @@ class App(tk.Tk):
         notebook.add(self.config, text="設定")
 
         setattr(Main, "get_config", self.config.check)
+        setattr(Main, "get_volume", self.config.vol.get)
         setattr(Main, "chat_print", self.chat_print)
         setattr(Main, "info_print", self.info_print)
 
@@ -330,7 +347,6 @@ class App(tk.Tk):
 
 
 def main():
-    os.chdir(Path(__file__).parent)
     ctypes.windll.kernel32.SetConsoleTitleW("PSO2LogReader")
     appmtx = ctypes.windll.kernel32.CreateMutexW(None, False, 'PSO2LogReadr')
 

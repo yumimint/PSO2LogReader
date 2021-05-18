@@ -1,19 +1,26 @@
+# %%
+
 import logging
+import os
+import pathlib
+import random
 import re
 
-import playsound
 import pyperclip
 
 import bouyomichan
 import chatcmd
 import misc
+from playsound import playsound
 
 logger = logging.getLogger(__name__)
 
 REPORT_ITEM_MAX = 10
 
+os.chdir(pathlib.Path(__file__).parent)
+
 casinocounter = misc.CasinoCounter()
-spitem = misc.UsersFile("spitem.txt", misc.spitem_loader)
+spitem = misc.UsersFile("spitem.txt", misc.SpItem.load)
 la_dict = misc.UsersFile("lobbyactions.csv", misc.la_dict_loader)
 if len(la_dict()) == 0:
     la_dict.data = misc.load_la_dict_online()
@@ -33,6 +40,40 @@ def casino_stateus(text):
 
 def get_config(code):
     return False
+
+
+def get_volume():
+    return 1.0
+
+
+def random_sound():
+    last = None
+    while True:
+        ls = list(spitem().sounds)
+        if not ls:
+            yield None
+            continue
+
+        if len(ls) == 1:
+            yield ls[0]
+            continue
+
+        while ls:
+            sound = random.choice(ls)
+            if sound is last:
+                continue
+            ls.remove(sound)
+            yield sound
+            last = sound
+
+
+random_sound = random_sound()
+
+
+def sound_test():
+    sound = next(random_sound)
+    if sound is not None:
+        play_sound(sound)
 
 
 def pushitem(item, num):
@@ -63,21 +104,20 @@ def spitem_check_and_notify(item):
     dic = spitem()
 
     if item in dic:
+        sound = dic[item]
         if get_config(105):
             talk(item)
-        sound = dic[item]
         if get_config(300):
             play_sound(sound)
         return
 
-    if "regexp" in dic:
-        for pattern, sound in dic["regexp"]:
-            if pattern.match(item):
-                if get_config(105):
-                    talk(item)
-                if get_config(300):
-                    play_sound(sound)
-                return
+    for pattern, sound in dic.rex:
+        if pattern.match(item):
+            if get_config(105):
+                talk(item)
+            if get_config(300):
+                play_sound(sound)
+            return
 
 
 talkactive = misc.TalkativesDetector()
@@ -91,7 +131,7 @@ def talk(text, guard_time=60):
 
 def play_sound(sound, guard_time=1):
     if not talkactive_sound(sound, guard_time):
-        playsound.playsound(sound, block=False)
+        playsound(sound, get_volume())
 
 
 ##############################################################################
@@ -100,30 +140,40 @@ def play_sound(sound, guard_time=1):
 def handle_Chat(ent):
     time, seq, channel, id, name, mess = ent[:6]
 
-    _ = re.search(r'/[cmf]?la +([^ ]+)', mess)
-    if _:
-        cmd = _.group(1)
+    la = re.search(r'/[cmf]?la +([^ ]+)', mess)
+    if la:
+        cmd = la.group(1)
         dic = la_dict()
         if cmd in dic:
-            mess += ' ' + dic[cmd]
-            la = re.sub(r'^\d+', '', dic[cmd])
+            la_ticket = dic[cmd]
             if get_config(102):
-                talk(f'{name}が{la}した')
-            if get_config(201):
-                pyperclip.copy(_.group(0))
+                la_name = re.sub(r'^\d+', '', la_ticket)  # 番号を除く
+                talk(f'{name}が{la_name}した')
+            if get_config(203) and cmd in dic.reaction:
+                pyperclip.copy("/la reaction")
+            elif get_config(201):
+                pyperclip.copy(la.group(0))
             elif get_config(202):
-                pyperclip.copy(dic[cmd])
+                pyperclip.copy(la_ticket)
 
-    _ = re.search(
+    equip = re.search(
         r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
-    if _:
-        item = _.group(2)
+    if equip:
         if get_config(103):
-            talk(f'{name}が{item}を装備した')
+            talk(f'{name}が{equip.group(2)}を装備した')
 
     txt = chatcmd.strip(mess)
     if txt:
         talk(f'{name}「{txt}」')
+
+    if "la_ticket" in locals():
+        mess += " " + la_ticket
+        if cmd in dic.loop:
+            mess += " Loop"
+        if cmd in dic.reaction:
+            mess += " Reaction"
+        if cmd in dic.notrade:
+            mess += " NoTrade"
 
     chat_print(ent, mess)
 
@@ -203,3 +253,5 @@ def on_entry(ent):
     if name in g:
         fn = g[name]
         fn(ent)
+
+# %%
