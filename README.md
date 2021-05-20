@@ -26,7 +26,7 @@ install.batを実行してください。
 
 ## 使い方
 
-**PSO2LogReader.pywをダブルクリックすれば起動します。
+PSO2LogReader.pywをダブルクリックすれば起動します。
 
 ## 関連ファイルについて
 
