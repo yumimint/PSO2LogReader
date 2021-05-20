@@ -2,8 +2,8 @@ import ctypes.wintypes
 import json
 import logging
 import queue
-from ssl import OPENSSL_VERSION
 import tkinter as tk
+import webbrowser
 from pathlib import Path
 from tkinter import ttk
 
@@ -31,6 +31,59 @@ except FileNotFoundError:
         "on": [100, 101, 102, 103, 104, 300, 105, 301],
         "volume": 0.25,
     }
+
+
+class ToolTip():
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Motion>", self.motion)
+        self.widget.bind("<Leave>", self.leave)
+        self.id = None
+        self.tw = None
+
+    def enter(self, event):
+        self.schedule()
+
+    def motion(self, event):
+        self.unschedule()
+        self.schedule()
+
+    def leave(self, event):
+        self.unschedule()
+        self.id = self.widget.after(500, self.hideTooltip)
+
+    def schedule(self):
+        if self.tw:
+            return
+        self.unschedule()
+        self.id = self.widget.after(500, self.showTooltip)
+
+    def unschedule(self):
+        id = self.id
+        self.id = None
+        if id:
+            self.widget.after_cancel(id)
+
+    def showTooltip(self):
+        id = self.id
+        self.id = None
+        if id:
+            self.widget.after_cancel(id)
+        x, y = self.widget.winfo_pointerxy()
+        self.tw = tk.Toplevel(self.widget)
+        self.tw.wm_overrideredirect(True)
+        self.tw.geometry(f"+{x+10}+{y+10}")
+        label = tk.Label(self.tw, text=self.text, background="lightyellow",
+                         relief="solid", borderwidth=1, justify="left")
+        label.pack(ipadx=10)
+
+    def hideTooltip(self):
+        tw = self.tw
+        self.tw = None
+        if tw:
+            tw.destroy()
 
 
 class LogView(tk.Frame):
@@ -99,32 +152,48 @@ class LogView(tk.Frame):
                 self.text.see('end')
 
 
+def tk_scale_button1(event):
+    # https://stackoverflow.com/questions/42817599/force-tkinter-scale-slider-to-snap-to-mouse/42819712
+    event.widget.event_generate('<3>', x=event.x, y=event.y)
+    return 'break'
+
+
+def fix_tk_scale_behavior(widget):
+    widget.bind('<1>', tk_scale_button1)
+
+
 class ConfigUI(ttk.Frame):
     itemz = [
         # (code, text)
-        (100, '獲得したメセタ・アイテムを集計して読み上げ'),
-        (101, 'カジノ遊戯の状況を読み上げ'),
-        (102, 'ロビアクを読み上げ'),
-        (103, '装備を読み上げ'),
-        (104, 'シンボルアートを読み上げ'),
-        (200, '報酬アイテム名をクリップボードへコピー'),
-        (203, 'リアクション対応ロビアクを見つけたら"/la reaction"をクリップボードへコピー'),
-        (201, 'ロビアクのコマンドをクリップボードへコピー'),
-        (202, 'ロビアクのチケット名をクリップボードへコピー'),
-        (300, '特定アイテムを獲得した時にサウンドを再生'),
-        (105, '特定アイテムを獲得した時に読み上げ'),
-        (301, '倉庫送りを検出した時に警告サウンドを再生'),
+        (100, '獲得したメセタ・アイテムを集計して読み上げ', None),
+        (101, 'カジノ遊戯の状況を読み上げ', None),
+        (102, 'ロビアクを読み上げ', "○○が××した"),
+        (103, '装備を読み上げ',
+         "/skillring /costume /camouflage"),
+        (104, 'シンボルアートを読み上げ', "○○のシンボルアート"),
+        (200, '報酬アイテム名をクリップボードへコピー', None),
+        (203, 'リアクション対応ロビアクを見つけたら"/la reaction"をクリップボードへコピー',
+         None),
+        (201, 'ロビアクのコマンドをクリップボードへコピー',
+         "コマンドがコピーされます。"
+         "\nロビアクを手動で真似したいときに便利です。"),
+        (202, 'ロビアクのチケット名をクリップボードへコピー',
+         "チケット名がコピーされます。"
+         "\nマイショップで検索するときに便利です。"),
+        (300, '特定アイテムを獲得した時にサウンドを再生', None),
+        (105, '特定アイテムを獲得した時に読み上げ', None),
+        (301, '倉庫送りを検出した時に警告サウンドを再生', None),
     ]
 
     exclusion = [{201, 202}]
 
     def __init__(self, master):
-        super(ConfigUI, self).__init__(master)
+        super(ConfigUI, self).__init__(master, padding=10)
 
         self.boolvars = {}
-        frame = ttk.Frame(self)
+        frame = ttk.LabelFrame(self, text="機能")
         for row, iten in enumerate(self.itemz):
-            code, text = iten
+            code, text, tip = iten
             bv = tk.BooleanVar()
             cb = tk.Checkbutton(
                 frame, text=text, variable=bv, command=self.checkbox_modified)
@@ -132,13 +201,27 @@ class ConfigUI(ttk.Frame):
             setattr(cb, "ud_code", code)
             cb.bind("<1>", self.on_click)
             self.boolvars[code] = [bv, False]
+            if tip:
+                ToolTip(cb, tip)
         frame.pack(fill=tk.X)
 
-        ttk.Label(self, text="音量").pack(side=tk.LEFT)
+        frame = ttk.LabelFrame(self, padding=10, text="サウンド")
+        _ = ttk.Label(frame, text="音量")
+        _.pack(side=tk.LEFT)
+
         self.vol = tk.DoubleVar()
-        ttk.Scale(self, variable=self.vol).pack(side=tk.LEFT)
-        ttk.Button(self, text="サウンドテスト",
-                   command=Main.sound_test).pack(side=tk.LEFT)
+        _ = ttk.Scale(frame, variable=self.vol, length=200)
+        _.pack(side=tk.LEFT, padx=24)
+        fix_tk_scale_behavior(_)
+
+        _ = ttk.Button(frame, text="テスト", command=Main.sound_test)
+        _.pack(side=tk.LEFT)
+        frame.pack(fill=tk.X)
+
+        url = "https://github.com/yumimint/PSO2LogReader"
+        _ = ttk.Label(self, text=url, foreground="blue", cursor="hand2")
+        _.bind("<1>", lambda event: webbrowser.open(url))
+        _.pack(side=tk.BOTTOM)
 
         self.pack(expand=True)
         self.load(config_obj)
