@@ -1,0 +1,2 @@
+import gmain
+gmain.main()
