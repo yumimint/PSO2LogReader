@@ -172,7 +172,7 @@ def handle_Chat(ent):
             note.append("Reaction")
         if cmd in dic.notrade:
             note.append("NoTrade")
-        mess += " ".join(note)
+        mess += " " + " ".join(note)
         la_add((la_ticket, cmd, " ".join(note[1:])))
 
     chat_print(ent, mess)
