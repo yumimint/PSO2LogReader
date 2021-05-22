@@ -20,19 +20,35 @@ import main as Main
 # matplotlib.use('TkAgg')
 logger = logging.getLogger(__name__)
 
-config_path = Path(__file__).with_name("config.json")
 
-try:
-    with config_path.open("rt", encoding="utf-8") as fp:
-        config_obj = json.load(fp)
-    del fp
-except FileNotFoundError:
-    config_obj = {
-        "on": [100, 101, 102, 103, 104, 300, 105, 301],
-        "volume": 0.25,
-    }
+class AppConfig:
+    _path = Path(__file__).with_name("config.json")
+
+    on = [100, 101, 102, 103, 104, 300, 105, 301]
+    volume = 0.25
+    fontsize = 11
+    geometry = ""
+
+    def load(self):
+        try:
+            with self._path.open("rt", encoding="utf-8") as fp:
+                for attr, val in json.load(fp).items():
+                    setattr(self, attr, val)
+        except FileNotFoundError:
+            pass
+
+    def save(self):
+        obj = {
+            attr: getattr(self, attr)
+            for attr in filter(lambda s: not s.startswith("_"), dir(self))
+        }
+        del obj["save"], obj["load"]
+
+        with self._path.open("wt", encoding="utf-8") as fp:
+            json.dump(obj, fp)
 
 
+# https://www.ishikawasekkei.com/index.php/2020/05/17/python-tkinter-gui-programing-tooltip/
 class ToolTip():
     def __init__(self, widget, text):
         self.widget = widget
@@ -137,7 +153,7 @@ class LogView(tk.Frame):
     # def select_all(self):
     #     print(self.text.info())
 
-    def append(self, text, tag):
+    def append(self, text, tag="PUBLIC"):
         self.q.put((text, tag))
 
     def update(self):
@@ -224,7 +240,6 @@ class ConfigUI(ttk.Frame):
         _.pack(side=tk.BOTTOM)
 
         self.pack(expand=True)
-        self.load(config_obj)
 
     def on_click(self, event):
         self.last_code = event.widget.ud_code
@@ -247,23 +262,22 @@ class ConfigUI(ttk.Frame):
                         v[0].set(False)
                         v[1] = False
 
-    def store(self, obj):
-        obj["on"] = [
+    def store(self, conf: AppConfig):
+        conf.on = [
             code
             for code in self.boolvars.keys()
             if self.boolvars[code][1]
         ]
-        obj["volume"] = self.vol.get()
+        conf.volume = self.vol.get()
 
-    def load(self, obj):
-        for code in obj["on"]:
+    def load(self, conf: AppConfig):
+        for code in conf.on:
             try:
                 self.boolvars[code][0].set(True)
                 self.boolvars[code][1] = True
             except KeyError:
                 pass
-        if "volume" in obj:
-            self.vol.set(obj["volume"])
+        self.vol.set(conf.volume)
 
 
 class CasinoCoinFig(tk.Frame):
@@ -345,14 +359,12 @@ class App(tk.Tk):
         ('info', 'アイテム'),
     ]
 
-    def __init__(self):
+    def __init__(self, conf: AppConfig):
         super(App, self).__init__()
+        self.conf = conf
         self.title('PSO2LogReadr')
         self.iconbitmap(Path(__file__).with_name("PSO2LogReader.ico"))
-        try:
-            self.geometry(config_obj["geometry"])
-        except KeyError:
-            pass
+        self.geometry(conf.geometry)
         self.protocol("WM_DELETE_WINDOW", self._close)
 
         self.view = {}
@@ -364,11 +376,14 @@ class App(tk.Tk):
             view = LogView(notebook)
             notebook.add(view, text=name)
             self.view[tag] = view
+            view.text.bind("<MouseWheel>", self.mouse_wheel)
+        self.set_viewfontsize(conf.fontsize)
 
         self.ccfig = CasinoCoinFig(notebook)
         notebook.add(self.ccfig, text="カジノ")
 
         self.config = ConfigUI(notebook)
+        self.config.load(self.conf)
         notebook.add(self.config, text="設定")
 
         setattr(Main, "get_config", self.config.check)
@@ -376,10 +391,27 @@ class App(tk.Tk):
         setattr(Main, "chat_print", self.chat_print)
         setattr(Main, "info_print", self.info_print)
 
+    def mouse_wheel(self, event):
+        if event.state & 4:  # Ctrl
+            fontsize = self.conf.fontsize
+            if event.delta > 0:
+                fontsize = min(fontsize + 1, 24)
+            if event.delta < 0:
+                fontsize = max(fontsize - 1, 6)
+            if self.conf.fontsize != fontsize:
+                self.conf.fontsize = fontsize
+                self.set_viewfontsize(fontsize)
+            return "break"
+
+    def set_viewfontsize(self, size):
+        font = (None, size)
+        for view in self.view.values():
+            view.text.configure(font=font)
+
     def _close(self):
         self.keep_running = False
-        self.config.store(config_obj)
-        config_obj["geometry"] = self.geometry()
+        self.config.store(self.conf)
+        self.conf.geometry = self.geometry()
 
     def chat_print(self, ent, text):
         time, seq, channel, id, name = ent[: 5]
@@ -438,10 +470,10 @@ def main():
             None, "すでに起動しています", "PSO2LogReadr", 0x10)
         exit(1)
 
-    App().mainloop()
-
-    with config_path.open("wt", encoding="utf-8") as fp:
-        json.dump(config_obj, fp)
+    conf = AppConfig()
+    conf.load()
+    App(conf).mainloop()
+    conf.save()
 
     ctypes.windll.kernel32.ReleaseMutex(appmtx)
 
