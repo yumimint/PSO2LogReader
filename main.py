@@ -1,29 +1,25 @@
-# %%
-
-import logging
 import os
 import pathlib
 import random
 import re
-
-import pyperclip
 
 import bouyomichan
 import chatcmd
 import misc
 from playsound import playsound
 
-logger = logging.getLogger(__name__)
-
 REPORT_ITEM_MAX = 10
 
 os.chdir(pathlib.Path(__file__).parent)
 
 casinocounter = misc.CasinoCounter()
-spitem = misc.UsersFile("spitem.txt", misc.SpItem.load)
-la_dict = misc.UsersFile("lobbyactions.csv", misc.la_dict_loader)
-if len(la_dict()) == 0:
-    la_dict.data = misc.load_la_dict_online()
+
+spitem = misc.UsersFile(
+    "spitem.txt",
+    misc.SpItem.load, misc.SpItem)
+la_dict = misc.UsersFile(
+    "lobbyactions.csv",
+    misc.la_dict_loader, misc.load_la_dict_online)
 
 
 def chat_print(ent, text):
@@ -46,13 +42,19 @@ def get_volume():
     return 1.0
 
 
+def la_add(tpl):
+    pass
+
+
+def clipboard(text):
+    pass
+
+
 def random_sound():
     last = None
     while True:
         ls = list(spitem().sounds)
-        if not ls:
-            yield None
-            continue
+        ls.append("emergency-alert1.mp3")
 
         if len(ls) == 1:
             yield ls[0]
@@ -150,11 +152,7 @@ def handle_Chat(ent):
                 la_name = re.sub(r'^\d+', '', la_ticket)  # 番号を除く
                 talk(f'{name}が{la_name}した')
             if get_config(203) and cmd in dic.reaction:
-                pyperclip.copy("/la reaction")
-            elif get_config(201):
-                pyperclip.copy(la.group(0))
-            elif get_config(202):
-                pyperclip.copy(la_ticket)
+                clipboard("/la reaction")
 
     equip = re.search(
         r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
@@ -167,13 +165,15 @@ def handle_Chat(ent):
         talk(f'{name}「{txt}」')
 
     if "la_ticket" in locals():
-        mess += " " + la_ticket
+        note = [la_ticket]
         if cmd in dic.loop:
-            mess += " Loop"
+            note.append("Loop")
         if cmd in dic.reaction:
-            mess += " Reaction"
+            note.append("Reaction")
         if cmd in dic.notrade:
-            mess += " NoTrade"
+            note.append("NoTrade")
+        mess += " ".join(note)
+        la_add((la_ticket, cmd, " ".join(note[1:])))
 
     chat_print(ent, mess)
 
@@ -189,7 +189,7 @@ def handle_Reward(ent):
     item, num = ent[5], ent.Num
     pushitem(item, num)
     if get_config(200):
-        pyperclip.copy(item)
+        clipboard(item)
 
 
 def handle_Action(ent):
@@ -253,5 +253,3 @@ def on_entry(ent):
     if name in g:
         fn = g[name]
         fn(ent)
-
-# %%

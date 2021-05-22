@@ -1,2 +1,2 @@
-python -m pip install pyperclip matplotlib
+python -m pip install matplotlib
 pause

@@ -11,13 +11,17 @@ import time
 import urllib.request
 
 
-class UsersFile:
-    data = {}
+logger = logging.getLogger(__name__)
 
-    def __init__(self, filename, loader):
+
+class UsersFile:
+    data = None
+
+    def __init__(self, filename, loader, loader2=None):
         self.mtime = 0
         self.path = pathlib.Path(__file__).with_name(filename)
         self.loader = loader
+        self.loader2 = loader2
 
     def __call__(self):
         try:
@@ -26,16 +30,19 @@ class UsersFile:
                 self.data = self.loader(self.path)
                 self.mtime = t
         except FileNotFoundError:
-            pass
+            if self.data is None:
+                self.data = self.loader2()
         return self.data
 
 
 class SpItem(dict):
+    def __init__(self):
+        self.rex = set()
+        self.sounds = set()
+
     @classmethod
     def load(cls, path):
         self = cls()
-        self.rex = set()
-        self.sounds = set()
         current_audio = None
         with path.open(encoding="utf-8") as f:
             for line in f.readlines():
@@ -51,14 +58,14 @@ class SpItem(dict):
                     self.rex.add((pattern, current_audio))
                     continue
                 self[line] = current_audio
-        logging.info(str(path) + " loaded")
+        logger.info(str(path) + " loaded")
         return self
 
 
 def la_dict_loader(path):
     with path.open(encoding='utf-8') as f:
         dic = LaDict.load(f)
-    logging.info(str(path) + " loaded")
+    logger.info(str(path) + " loaded")
     return dic
 
 
@@ -96,10 +103,10 @@ def load_la_dict_online():
         req = urllib.request.Request(url)
         with urllib.request.urlopen(req) as src:
             f = io.TextIOWrapper(io.BytesIO(src.read()), encoding="utf-8")
-        logging.info("lobbyactions.csv downloaded.")
+        logger.info("lobbyactions.csv downloaded.")
 
     except Exception as e:
-        logging.warning(e)
+        logger.warning(e)
         return {}
 
     return LaDict.load(f)
