@@ -147,12 +147,14 @@ def handle_Chat(ent):
         cmd = la.group(1)
         dic = la_dict()
         if cmd in dic:
-            la_ticket = dic[cmd]
+            la = dic[cmd]
             if get_config(102):
-                la_name = re.sub(r'^\d+', '', la_ticket)  # 番号を除く
+                la_name = re.sub(r'^\d+', '', la.name)  # 番号を除く
                 talk(f'{name}が{la_name}した')
-            if get_config(203) and cmd in dic.reaction:
+            if get_config(203) and "Reaction" in la.note:
                 clipboard("/la reaction")
+        else:
+            del la
 
     equip = re.search(
         r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
@@ -164,16 +166,9 @@ def handle_Chat(ent):
     if txt:
         talk(f'{name}「{txt}」')
 
-    if "la_ticket" in locals():
-        note = [la_ticket]
-        if cmd in dic.loop:
-            note.append("Loop")
-        if cmd in dic.reaction:
-            note.append("Reaction")
-        if cmd in dic.notrade:
-            note.append("NoTrade")
-        mess += " " + " ".join(note)
-        la_add((la_ticket, cmd, " ".join(note[1:])))
+    if "la" in locals():
+        la_add(cmd)
+        mess += " " + la.name
 
     chat_print(ent, mess)
 

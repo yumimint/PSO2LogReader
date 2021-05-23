@@ -1,59 +1,109 @@
 import tkinter as tk
+from collections import OrderedDict
 from tkinter import ttk
-from tkinter.font import Font
 
 import main as Main
 
+tr_table = {
+    chr(0xFF01 + i): chr(0x21 + i)
+    for i in range(0x7e - 0x21)
+}
+
+tr_table.update({
+    chr(0x3041 + i): chr(0x30a1 + i)
+    for i in range(0x3096 - 0x3041 + 1)
+})
+
+tr_table = str.maketrans(tr_table)
+
 
 class LaListView(tk.Frame):
-    dataCols = ('チケット', 'コマンド', '備考')
+    dataCols = ('名称', 'コマンド', '備考')
 
     def __init__(self, master):
         super(LaListView, self).__init__(master)
 
-        f = self
-        f.pack(side=tk.TOP, fill=tk.BOTH, expand=tk.Y)
+        self.pack(expand=True, fill=tk.BOTH)
 
+        ##############
+        # 検索エントリ
+        f = tk.Frame(self)
+        f.pack(side=tk.TOP, fill=tk.BOTH)
+        _ = tk.Label(f, text="絞り込み")
+        _.pack(side=tk.LEFT)
+        self.sv = sv = tk.StringVar()
+        self.ent = _ = tk.Entry(f, textvariable=sv)
+        _.pack(side=tk.LEFT, fill=tk.X)
+
+        #################################
         # create the tree and scrollbars
+        f = tk.Frame(self)
+        f.pack(side=tk.TOP, fill=tk.BOTH, expand=tk.Y)
+        f.rowconfigure(0, weight=1)
+        f.columnconfigure(0, weight=1)
         self.tree = ttk.Treeview(columns=self.dataCols,
                                  show='headings',
                                  selectmode="browse")
-
         ysb = ttk.Scrollbar(orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=ysb.set)
-
         # add tree and scrollbars to frame
         self.tree.grid(in_=f, row=0, column=0, sticky=tk.NSEW)
         ysb.grid(in_=f, row=0, column=1, sticky=tk.NS)
-
-        # set frame resize priorities
-        f.rowconfigure(0, weight=1)
-        f.columnconfigure(0, weight=1)
-
-        tree = self.tree
-        measure = Font().measure
         # configure column headings
         for c in self.dataCols:
-            tree.heading(c, text=c)
-            tree.column(c, width=measure(c))
+            self.tree.heading(c, text=c)
+            self.tree.column(c, width=110)
 
-        self.popup_menu = tk.Menu(tree, tearoff=0)
-        self.tree.bind("<Button-3>", self.popup)
+        #####################
+        # ポップアップメニュー
+        self.popup_menu = tk.Menu(self.tree, tearoff=0)
         _ = self.popup_menu.add_command
-        _(label="チケットをコピー", command=self.copy_ticket)
+        _(label="名称をコピー", command=self.copy_ticket)
         _(label="コマンドをコピー", command=lambda: self.copy_command("/la"))
         _(label="男性/mla", command=lambda: self.copy_command("/mla"))
         _(label="女性/fla", command=lambda: self.copy_command("/fla"))
         _(label="異性/cla", command=lambda: self.copy_command("/cla"))
 
+        ############
+        # データ挿入
+        self.odict = OrderedDict()
+        self.sdict = {}
+        for la in Main.la_dict().values():
+            self.insert_la(la)
+
+        #
+        #
+        self.sv.trace_add("write", lambda var, indx, mode: self.search())
+        self.tree.bind("<Button-3>", self.popup)
         self.tree.bind("<Double-Button-1>", self.dclick)
-
-        self.itemz = {}
-
         setattr(Main, "la_add", self.add)
 
+    def insert_la(self, la):
+        item = self.tree.insert("", "end", values=la)
+        self.odict[la.cmd] = item
+        key = "\t".join(la).translate(tr_table).lower()
+        self.sdict[key] = item
+
+    def search(self, *args):
+        # print(args)
+        target = self.sv.get().translate(tr_table).lower()
+        tree = self.tree
+        for index, item in enumerate(self.odict.values()):
+            tree.move(item, "", index)
+        self.ent.configure(background="white")
+        if not target:
+            return
+        hit = False
+        for key, item in self.sdict.items():
+            if target in key:
+                hit = True
+            else:
+                tree.detach(item)
+        self.ent.configure(background="lightgreen" if hit else "pink")
+
     def popup(self, event):
-        if not self.tree.selection():
+        sel = self.tree.selection()
+        if len(sel) != 1:
             return
         try:
             self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
@@ -64,7 +114,7 @@ class LaListView(tk.Frame):
         tree = self.tree
         item = tree.set(tree.selection())
         self.clipboard_clear()
-        self.clipboard_append(item['チケット'])
+        self.clipboard_append(item['名称'])
 
     def copy_command(self, cmd):
         tree = self.tree
@@ -80,50 +130,37 @@ class LaListView(tk.Frame):
             col = tree.identify_column(event.x)
             self.clipboard_clear()
             if col == "#1":
-                self.clipboard_append(item["チケット"])
+                self.clipboard_append(item["名称"])
             else:
-                self.clipboard_append(item["コマンド"])
+                self.clipboard_append("/la " + item["コマンド"])
 
-    def add(self, item):
-        tree = self.tree
-        if item in self.itemz:
-            def reorder():
-                top = self.itemz[item]
-                yield top
-                for child in tree.get_children(""):
-                    if child != top:
-                        yield child
-            for index, item in enumerate(reorder()):
-                tree.move(item, "", index)
-        else:
-            self.itemz[item] = tree.insert('', 0, values=item)
-            # adjust column widths if necessary
-            measure = Font().measure
-            for idx, val in enumerate(item):
-                c = self.dataCols[idx]
-                iwidth = measure(val)
-                if tree.column(c, 'width') < iwidth:
-                    tree.column(c, width=iwidth)
+    def add(self, cmd):
+        if cmd not in self.odict:
+            dict = Main.la_dict()
+            if cmd in dict:
+                self.insert_la(dict[cmd])
+            else:
+                return
+
+        self.odict.move_to_end(cmd, last=False)
+        self.search()
 
 
 if __name__ == '__main__':
     root = tk.Tk()
     demo = LaListView(root)
 
-    def g():
-        while True:
-            ls = [
-                ("Argentina", "BuenosAires", "ARS"),
-                ("Australia", "Canberra", "AUD"),
-                ("Brazil", "Brazilia", "BRL"),
-            ]
-            while ls:
-                import random
-                i = random.choice(ls)
-                ls.remove(i)
-                yield i
+    # def gen():
+    #     while True:
+    #         ls = list(Main.la_dict().keys())
+    #         import random
+    #         while ls:
+    #             cmd = random.choice(ls)
+    #             ls.remove(cmd)
+    #             yield cmd
 
-    g = g()
-    demo.tree.bind("<MouseWheel>", lambda event: demo.add(next(g)))
+    # gen = gen()
 
+    # demo.tree.bind("<MouseWheel>", lambda event: demo.add(next(gen)))
+    root.geometry("480x480")
     root.mainloop()

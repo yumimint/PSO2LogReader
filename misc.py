@@ -10,7 +10,6 @@ import threading
 import time
 import urllib.request
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -69,32 +68,37 @@ def la_dict_loader(path):
     return dic
 
 
+LobbyAction = collections.namedtuple("LobbyAction", "name cmd note")
+
+
 class LaDict(dict):
     @classmethod
     def load(cls, f):
         dic = cls()
-        loop = []
-        reaction = []
-        notrade = []
         f.readline()  # skip header line
         for row in csv.reader(f):
-            # 0:名称 1:コマンド 2:ループ 3:リアクション対応 4:トレード不可 5:入手
+            # 0:名称 1:コマンド 2:ループ 3:リアクション対応 4:トレード不可 5:指の動きに対応 6:入手
             if len(row) < 4:
                 continue
             name, cmd = row[:2]
             if not cmd:
                 continue
-            dic[cmd] = name
+            note = []
             if row[2] == "1":
-                loop.append(cmd)
-            if row[3] == "1" and cmd != "reaction":
-                reaction.append(cmd)
+                note.append("Loop")
+            if row[3] == "1":
+                note.append("Reaction")
             if row[4] == "1":
-                notrade.append(cmd)
-        dic.loop = frozenset(loop)
-        dic.reaction = frozenset(reaction)
-        dic.notrade = frozenset(notrade)
+                note.append("NoTrade")
+            if row[5] == "1":
+                note.append("Finger")
+            dic[cmd] = LobbyAction(name, cmd, " ".join(note))
         return dic
+
+    def __call__(self, cmd):
+        if cmd not in self:
+            return None
+        return self[cmd]
 
 
 def load_la_dict_online():
