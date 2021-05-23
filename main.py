@@ -142,9 +142,9 @@ def play_sound(sound, guard_time=1):
 def handle_Chat(ent):
     time, seq, channel, id, name, mess = ent[:6]
 
-    la = re.search(r'/[cmf]?la +([^ ]+)', mess)
-    if la:
-        cmd = la.group(1)
+    match = re.search(r'/[cmf]?la +([^ ]+)', mess)
+    if match:
+        cmd = match.group(1)
         dic = la_dict()
         if cmd in dic:
             la = dic[cmd]
@@ -153,8 +153,6 @@ def handle_Chat(ent):
                 talk(f'{name}が{la_name}した')
             if get_config(203) and "Reaction" in la.note:
                 clipboard("/la reaction")
-        else:
-            del la
 
     equip = re.search(
         r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
