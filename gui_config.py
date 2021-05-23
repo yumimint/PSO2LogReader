@@ -31,12 +31,9 @@ class ConfigPane(ttk.Frame):
         for row, iten in enumerate(itemz):
             code, text, tip = iten
             bv = tk.BooleanVar()
-            cb = tk.Checkbutton(
-                frame, text=text, variable=bv, command=self.checkbox_modified)
+            cb = tk.Checkbutton(frame, text=text, variable=bv)
             cb.grid(column=0, row=row, sticky="w")
-            setattr(cb, "ud_code", code)
-            cb.bind("<1>", self.on_click)
-            self.boolvars[code] = [bv, False]
+            self.boolvars[code] = bv
             if tip:
                 ToolTip(cb, tip)
         frame.pack(fill=tk.X)
@@ -64,31 +61,21 @@ class ConfigPane(ttk.Frame):
         setattr(Main, "get_config", self.check)
         setattr(Main, "get_volume", self.vol.get)
 
-    def on_click(self, event):
-        self.last_code = event.widget.ud_code
-
     def check(self, code):
-        # スレッドセーフ
-        return self.boolvars[code][1]
-
-    def checkbox_modified(self):
-        code = self.last_code
-        v = self.boolvars[code]
-        v[1] = v[0].get()
+        return self.boolvars[code].get()
 
     def store(self, conf):
         conf.on = [
             code
-            for code in self.boolvars.keys()
-            if self.boolvars[code][1]
+            for code, var in self.boolvars.items()
+            if var.get()
         ]
         conf.volume = self.vol.get()
 
     def load(self, conf):
         for code in conf.on:
             try:
-                self.boolvars[code][0].set(True)
-                self.boolvars[code][1] = True
+                self.boolvars[code].set(True)
             except KeyError:
                 pass
         self.vol.set(conf.volume)

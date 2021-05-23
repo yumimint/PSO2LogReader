@@ -1,4 +1,3 @@
-import queue
 import tkinter as tk
 import tkinter.ttk as ttk
 
@@ -9,7 +8,6 @@ class LogView(tk.Frame):
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
         self.grid(sticky=tk.NSEW)
-        self.q = queue.Queue()  # スレッドセーフにするためのキュー
 
         text = tk.Text(self,
                        state='disabled',
@@ -55,15 +53,10 @@ class LogView(tk.Frame):
     #     print(self.text.info())
 
     def append(self, text, tag="PUBLIC"):
-        self.q.put((text, tag))
-
-    def update(self):
-        while not self.q.empty():
-            text, tag = self.q.get()
-            pos = self.ysb.get()
-            follow = pos[1] > 0.99
-            self.text.configure(state='normal')
-            self.text.insert('end', text, tag)
-            self.text.configure(state='disabled')
-            if follow:
-                self.text.see('end')
+        pos = self.ysb.get()
+        follow = pos[1] > 0.99
+        self.text.configure(state='normal')
+        self.text.insert('end', text, tag)
+        self.text.configure(state='disabled')
+        if follow:
+            self.text.see('end')

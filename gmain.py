@@ -139,10 +139,6 @@ class App(tk.Tk):
                 ent = q.get()
                 Main.on_entry(ent)
 
-            # viewに溜まったqueueを処理する
-            for view in self.view.values():
-                view.update()
-
             self.casino.update()
             Main.reporter.update()
 
