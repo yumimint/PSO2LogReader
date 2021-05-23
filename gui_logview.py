@@ -21,8 +21,8 @@ class LogView(tk.Frame):
         for name, color in [
             ('PUBLIC', '#ffffff'),
             ('GROUP', '#88ff88'),
-            ('REPLY', '#ff88ff'),
-            ('GUILD', 'orange'),
+            ('REPLY', '#FF6699'),
+            ('GUILD', '#F59F01'),
             ('PARTY', 'cyan'),
             ('info', 'yellow'),
         ]:
