@@ -9,10 +9,12 @@ os.chdir(Path(__file__).parent)
 
 la_rex = re.compile(r"/la ?([\da-zA-Z_+\-']+)")
 brackets_rex = re.compile(r'(\d+)「(.+)」')
-zen2han_alpha = str.maketrans(
-    {chr(0xFF01 + i): chr(0x21 + i) for i in range(93)})
-han2zen_alpha = str.maketrans(
-    {chr(0x21 + i): chr(0xFF01 + i) for i in range(93)})
+zen2han_alpha = {chr(0xFF01 + i): chr(0x21 + i) for i in range(93)}
+han2zen_alpha = {chr(0x21 + i): chr(0xFF01 + i) for i in range(93)}
+zen2han_alpha.update({"　": " "})
+han2zen_alpha.update({" ": "　"})
+zen2han_alpha = str.maketrans(zen2han_alpha)
+han2zen_alpha = str.maketrans(han2zen_alpha)
 
 
 def name_regulator(name):

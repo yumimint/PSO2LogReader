@@ -9,6 +9,8 @@ tr_table = {
     for i in range(0x7e - 0x21)
 }
 
+tr_table.update({"　": " "})
+
 tr_table.update({
     chr(0x3041 + i): chr(0x30a1 + i)
     for i in range(0x3096 - 0x3041 + 1)
