@@ -33,7 +33,7 @@ with urllib.request.urlopen(urllib.request.Request(url)) as res:
 
 
 def records():
-    yield ['名称', 'コマンド', 'ループ', 'リアクション対応', 'トレード不可', '入手']
+    yield ['名称', 'コマンド', 'ループ', 'リアクション対応', 'トレード不可', '指の動きに対応', '入手']
 
     lastnum = None
     dup = set()
@@ -62,8 +62,9 @@ def records():
         num = int(num.group(1)) if num else None
         src = re.sub(r',|ｼｮｯﾌﾟ|備考', '', src)
         notrade = '1' if 'トレード不可' in tr.text else '0'
-        reaction = '1' if 'リアクション対応' in tr.text else '0'
-        rec = [name, la, loop, reaction, notrade, src]
+        reaction = '1' if '※リアクション対応' in tr.text else '0'
+        finger = '1' if '※指の動きに対応' in tr.text else '0'
+        rec = [name, la, loop, reaction, notrade, finger, src]
 
         if lastnum:
             while num - lastnum > 1:
