@@ -131,7 +131,6 @@ class App(tk.Tk):
         q = queue.Queue()
         pump = logpump.LogPump(q.put)
         pump.start()
-        Main.report.start()
 
         self.keep_running = True
 
@@ -145,6 +144,7 @@ class App(tk.Tk):
                 view.update()
 
             self.casino.update()
+            Main.reporter.update()
 
             if self.keep_running:
                 self.after(500, loop)
@@ -155,7 +155,6 @@ class App(tk.Tk):
 
         super(App, self).mainloop()
 
-        Main.report.stop()
         pump.stop()
 
 

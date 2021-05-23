@@ -79,7 +79,7 @@ def sound_test():
 
 
 def pushitem(item, num):
-    report.put(item, num)
+    reporter.put(item, num)
     spitem_check_and_notify(item)
 
 
@@ -99,7 +99,7 @@ def report_handler(counter: misc.ItemCounter):
         talk(" ".join(names))
 
 
-report = misc.DelayedReporter(report_handler)
+reporter = misc.DelayedReporter(report_handler)
 
 
 def spitem_check_and_notify(item):

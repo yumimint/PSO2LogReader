@@ -6,7 +6,6 @@ import logging
 import pathlib
 import re
 import statistics
-import threading
 import time
 import urllib.request
 
@@ -180,10 +179,8 @@ class CasinoCounter:
         return self.ret - self.bet
 
 
-class ItemCounter(dict):
+class ItemCounter(collections.Counter):
     def add(self, item, num):
-        if item not in self:
-            self[item] = 0
         self[item] += num
 
     def sorted_items(self):
@@ -211,9 +208,6 @@ class ItemCounter(dict):
                 break
         return f'{item}({num}{unit})'
 
-    # zen2han_alpha = str.maketrans(
-    #     {chr(0xFF01 + i): chr(0x21 + i) for i in range(93)})
-
 
 class DelayedReporter:
     delay = 30
@@ -221,38 +215,29 @@ class DelayedReporter:
     def __init__(self, callback):
         self.callback = callback
         self.counter = ItemCounter()
-        self.added = threading.Event()
-        self.mutex = threading.Lock()
         self.expiry = 0
-        self.th = threading.Thread(target=self.main, daemon=True)
+        self.added = False
+        self.coro = self.main()
 
-    def start(self):
-        self.keep_running = True
-        self.th.start()
-
-    def stop(self):
-        self.keep_running = False
-        self.th.join()
+    def update(self):
+        next(self.coro)
 
     def put(self, item, num):
-        with self.mutex:
-            self.counter.add(item, num)
-            self.expiry = time.time() + self.delay
-        self.added.set()
+        self.counter.add(item, num)
+        self.expiry = time.time() + self.delay
+        self.added = True
 
     def main(self):
-        while self.keep_running:
-            if not self.added.wait(timeout=1):
-                continue
+        while True:
+            while not self.added:
+                yield
 
-            while self.added.is_set():
-                self.added.clear()
-                s = self.expiry - time.time()
-                if s > 0:
-                    time.sleep(s)
+            while self.added:
+                self.added = False
+                while time.time() < self.expiry:
+                    yield
 
-            with self.mutex:
-                counter = self.counter
-                self.counter = ItemCounter()
+            counter = self.counter
+            self.counter = ItemCounter()
 
             self.callback(counter)
