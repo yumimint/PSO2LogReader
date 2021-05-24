@@ -33,8 +33,8 @@ class AppConfig:
         obj = {
             attr: getattr(self, attr)
             for attr in filter(lambda s: not s.startswith("_"), dir(self))
+            if attr not in ["save", "load"]
         }
-        del obj["save"], obj["load"]
 
         with self._path.open("wt", encoding="utf-8") as fp:
             json.dump(obj, fp)
@@ -117,7 +117,7 @@ class App(tk.Tk):
         time = time[-8:]
         channel = 'GROUP' if channel == 'CHANNEL' else channel
 
-        text = f"{time} {name} {text}\n"
+        text = f"{time} {name}\n{text}\n"
         self.view['ALL'].append(text, channel)
         try:
             self.view[channel].append(text, channel)
