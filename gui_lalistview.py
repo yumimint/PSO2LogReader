@@ -104,6 +104,7 @@ class LaListView(tk.Frame):
         self.ent.configure(background="lightgreen" if hit else "pink")
 
     def popup(self, event):
+        event.widget.event_generate('<1>', x=event.x, y=event.y)
         sel = self.tree.selection()
         if len(sel) != 1:
             return
