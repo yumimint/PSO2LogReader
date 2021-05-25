@@ -28,7 +28,7 @@ class UsersFile:
                 self.data = self.loader(self.path)
                 self.mtime = t
         except FileNotFoundError:
-            if self.data is None:
+            if self.data is None and self.loader2 is not None:
                 self.data = self.loader2()
         return self.data
 
