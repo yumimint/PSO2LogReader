@@ -49,8 +49,13 @@ class InventoryView(tk.Frame):
 
         self.odict.move_to_end(name, last=False)
 
-        for indx, child in enumerate(self.odict.values()):
-            self.tree.move(child, "", indx)
+        for indx, child in enumerate(
+                zip(self.odict.values(),
+                    self.tree.get_children())):
+            if child[0] == child[1]:
+                print(indx)
+                break
+            self.tree.move(child[0], "", indx)
 
 
 if __name__ == '__main__':
