@@ -9,6 +9,7 @@ import logpump
 import main as Main
 from gui_casino import CasinoPane
 from gui_config import ConfigPane
+from gui_inventory import InventoryView
 from gui_lalistview import LaListView
 from gui_logview import LogView
 
@@ -48,7 +49,6 @@ class App(tk.Tk):
         ('GUILD', 'チーム'),
         ('GROUP', 'グループ'),
         ('REPLY', 'ウィスパー'),
-        ('info', 'アイテム'),
     ]
 
     def __init__(self, conf: AppConfig):
@@ -71,6 +71,9 @@ class App(tk.Tk):
             view.text.bind("<MouseWheel>", self.mouse_wheel)
         self.set_viewfontsize(conf.fontsize)
 
+        self.inventory = InventoryView(notebook)
+        notebook.add(self.inventory, text="アイテム")
+
         self.casino = CasinoPane(notebook)
         notebook.add(self.casino, text="カジノ")
 
@@ -82,7 +85,6 @@ class App(tk.Tk):
         notebook.add(self.config, text="設定")
 
         setattr(Main, "chat_print", self.chat_print)
-        setattr(Main, "info_print", self.info_print)
         setattr(Main, "clipboard", self.clipboard)
 
     def clipboard(self, text):
@@ -123,9 +125,6 @@ class App(tk.Tk):
             self.view[channel].append(text, channel)
         except KeyError:
             pass
-
-    def info_print(self, text):
-        self.view['info'].append(text + "\n", "info")
 
     def mainloop(self):
         q = queue.Queue()
