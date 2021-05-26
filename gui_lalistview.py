@@ -23,7 +23,7 @@ class LaListView(tk.Frame):
     dataCols = ('名称', 'コマンド', '備考')
 
     def __init__(self, master):
-        super(LaListView, self).__init__(master)
+        super().__init__(master)
 
         self.pack(expand=True, fill=tk.BOTH)
 

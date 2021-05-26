@@ -52,7 +52,7 @@ class App(tk.Tk):
     ]
 
     def __init__(self, conf: AppConfig):
-        super(App, self).__init__()
+        super().__init__()
         self.conf = conf
         self.title('PSO2LogReadr')
         self.iconbitmap(Path(__file__).with_name("PSO2LogReader.ico"))

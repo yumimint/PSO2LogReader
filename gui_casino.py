@@ -11,7 +11,7 @@ class CasinoPane(tk.Frame):
 
     def __init__(self, master):
         CasinoPane.singleton = self
-        super(CasinoPane, self).__init__(master)
+        super().__init__(master)
         self.pack(expand=True)
 
         # ステータスバー
