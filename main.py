@@ -50,6 +50,10 @@ def clipboard(text):
     pass
 
 
+def add_inventory(name, num):
+    pass
+
+
 def random_sound():
     last = None
     while True:
@@ -79,6 +83,7 @@ def sound_test():
 
 
 def pushitem(item, num):
+    add_inventory(item, num)
     reporter.put(item, num)
     spitem_check_and_notify(item)
 

@@ -24,7 +24,7 @@ itemz = [
 
 class ConfigPane(ttk.Frame):
     def __init__(self, master):
-        super(ConfigPane, self).__init__(master, padding=32)
+        super().__init__(master, padding=32)
 
         self.boolvars = {}
         frame = ttk.LabelFrame(self, text="機能")

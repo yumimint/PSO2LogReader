@@ -22,41 +22,33 @@ class LogView(tk.Frame):
             ('REPLY', '#FF6699'),
             ('GUILD', '#F59F01'),
             ('PARTY', 'cyan'),
-            ('info', 'yellow'),
         ]:
             text.tag_configure(name, foreground=color)
 
-        ysb = ttk.Scrollbar(self, orient='vertical', command=text.yview)
-        text.configure(yscrollcommand=ysb.set)
+        ysb = ttk.Scrollbar(self, orient='vertical', command=self.yview)
+        text.configure(yscrollcommand=self.ysbset)
         ysb.grid(row=0, column=1, sticky=tk.NS)
 
         self.text = text
         self.ysb = ysb
-
-        # self.popup_menu = tk.Menu(text, tearoff=0)
-        # self.popup_menu.add_command(label="ログを消去",
-        #                             command=self.delete_selected)
-        # self.popup_menu.add_command(label="Select All",
-        #                             command=self.select_all)
-        # text.bind("<Button-3>", self.popup)
-
-    def popup(self, event):
-        try:
-            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
-        finally:
-            self.popup_menu.grab_release()
-
-    # def delete_selected(self):
-    #     self.text.delete("end")
-
-    # def select_all(self):
-    #     print(self.text.info())
+        self.follow = True
 
     def append(self, text, tag="PUBLIC"):
-        pos = self.ysb.get()
-        follow = pos[1] > 0.99
         self.text.configure(state='normal')
         self.text.insert('end', text, tag)
         self.text.configure(state='disabled')
-        if follow:
+        if self.follow:
             self.text.see('end')
+
+    def _set_follow_flag(self):
+        pos = self.ysb.get()
+        self.follow = pos[1] >= 1.0
+
+    def yview(self, *args):
+        self.text.yview(*args)
+        self._set_follow_flag()
+
+    def ysbset(self, *args):
+        self.ysb.set(*args)
+        self._set_follow_flag()
+
