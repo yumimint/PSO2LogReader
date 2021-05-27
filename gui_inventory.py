@@ -39,12 +39,14 @@ class InventoryView(tk.Frame):
 
     def add(self, name, num=1):
         self.counter[name] += num
+        num_str = f"{self.counter[name]:,}"
+
         if name in self.odict:
             item = self.odict[name]
-            self.tree.set(item, "数量", self.counter[name])
+            self.tree.set(item, "数量", num_str)
         else:
             item = self.tree.insert(
-                "", "end", values=[name, self.counter[name]])
+                "", "end", values=[name, num_str])
             self.odict[name] = item
 
         self.odict.move_to_end(name, last=False)
@@ -53,7 +55,6 @@ class InventoryView(tk.Frame):
                 zip(self.odict.values(),
                     self.tree.get_children())):
             if child[0] == child[1]:
-                print(indx)
                 break
             self.tree.move(child[0], "", indx)
 
