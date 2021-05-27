@@ -1,16 +1,81 @@
 import tkinter as tk
 from collections import Counter, OrderedDict
+from datetime import datetime
 from tkinter import ttk
 
 import main as Main
 
 
 class InventoryView(tk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+
+        self.pack(expand=True, fill=tk.BOTH)
+
+        notebook = self.notebook = ttk.Notebook(self)
+        notebook.pack(fill=tk.BOTH, expand=True)
+
+        self.counterz = [CountView(notebook)]
+        notebook.add(self.counterz[0], text="総計")
+        notebook.add(tk.Frame(notebook), text="+")
+
+        notebook.bind("<<NotebookTabChanged>>", self.change)
+        notebook.bind("<Button-3>", self.button3, "+")
+
+        setattr(Main, "add_inventory", self.add)
+
+        popup = self.popup = tk.Menu(self, tearoff=0)
+        self.bv = tk.BooleanVar()
+        popup.add_checkbutton(
+            label="停止", command=self._pause, variable=self.bv)
+        popup.add_separator()
+        popup.add_command(label="閉じる", command=self._close)
+
+    def _close(self):
+        self.notebook.forget(self._indx)
+        del self.counterz[self._indx]
+        self.notebook.select(self._indx - 1)
+
+    def _pause(self):
+        self.counterz[self._indx].pause = self.bv.get()
+
+    def button3(self, event):
+        notebook = self.notebook
+        notebook.event_generate("<1>", x=event.x, y=event.y)
+        tabs = notebook.tabs()
+        indx = tabs.index(notebook.select())
+        if indx > 0 and indx < len(tabs) - 1:
+            try:
+                self._indx = indx
+                self.bv.set(self.counterz[self._indx].pause)
+                self.popup.tk_popup(event.x_root, event.y_root + 20, 0)
+            finally:
+                self.popup.grab_release()
+
+    def change(self, event):
+        notebook = self.notebook
+        tabs = notebook.tabs()
+        # 右端のタブが選択されたらCountViewを追加する
+        if tabs[-1] == notebook.select():
+            text = datetime.now().strftime("%H:%M:%S")
+            cv = CountView(notebook)
+            self.counterz.append(cv)
+            notebook.insert(len(tabs) - 1, cv, text=text)
+            notebook.select(notebook.tabs()[-2])
+            cv.bind("<2>", lambda event: event.widget.destroy())
+
+    def add(self, name, num):
+        for c in self.counterz:
+            if not c.pause:
+                c.add(name, num)
+
+
+class CountView(tk.Frame):
     dataCols = ["アイテム", "数量"]
 
     def __init__(self, master):
         super().__init__(master)
-
+        self.pause = False
         self.pack(expand=True, fill=tk.BOTH)
 
         #################################
@@ -35,7 +100,6 @@ class InventoryView(tk.Frame):
         self.counter = Counter()
         self.odict = OrderedDict()
 
-        setattr(Main, "add_inventory", self.add)
         self.tree.bind("<Double-Button-1>", self.dclick)
 
     def dclick(self, event):
