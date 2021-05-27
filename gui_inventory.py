@@ -36,6 +36,15 @@ class InventoryView(tk.Frame):
         self.odict = OrderedDict()
 
         setattr(Main, "add_inventory", self.add)
+        self.tree.bind("<Double-Button-1>", self.dclick)
+
+    def dclick(self, event):
+        tree = self.tree
+        sel = tree.selection()
+        if sel:
+            item = tree.set(sel)
+            self.clipboard_clear()
+            self.clipboard_append(item["アイテム"])
 
     def add(self, name, num=1):
         self.counter[name] += num
