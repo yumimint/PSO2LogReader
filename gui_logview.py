@@ -10,7 +10,7 @@ class LogView(tk.Frame):
         self.grid(sticky=tk.NSEW)
 
         text = tk.Text(self,
-                       state='disabled',
+                       state=tk.DISABLED,
                        foreground="white",
                        background="black",
                        )
@@ -25,7 +25,7 @@ class LogView(tk.Frame):
         ]:
             text.tag_configure(name, foreground=color)
 
-        ysb = ttk.Scrollbar(self, orient='vertical', command=self.yview)
+        ysb = ttk.Scrollbar(self, orient=tk.VERTICAL, command=self.yview)
         text.configure(yscrollcommand=self.ysbset)
         ysb.grid(row=0, column=1, sticky=tk.NS)
 
@@ -34,9 +34,9 @@ class LogView(tk.Frame):
         self.follow = True
 
     def append(self, text, tag="PUBLIC"):
-        self.text.configure(state='normal')
+        self.text.configure(state=tk.NORMAL)
         self.text.insert('end', text, tag)
-        self.text.configure(state='disabled')
+        self.text.configure(state=tk.DISABLED)
         if self.follow:
             self.text.see('end')
 
@@ -51,4 +51,3 @@ class LogView(tk.Frame):
     def ysbset(self, *args):
         self.ysb.set(*args)
         self._set_follow_flag()
-
