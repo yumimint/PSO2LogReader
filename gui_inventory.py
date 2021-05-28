@@ -37,7 +37,11 @@ class InventoryView(tk.Frame):
         self.notebook.select(self._indx - 1)
 
     def _pause(self):
-        self.counterz[self._indx].pause = self.bv.get()
+        state = self.bv.get()
+        self.counterz[self._indx].pause = state
+        text = self.notebook.tab(self._indx)["text"]
+        text = "*" + text if state else text[1:]
+        self.notebook.tab(self._indx, text=text)
 
     def button3(self, event):
         notebook = self.notebook
