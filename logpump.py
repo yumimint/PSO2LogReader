@@ -82,8 +82,8 @@ class LogFile:
 
         # st_sizeを信用せず、実際に読み進めてposを確定する
         self.pos = 2  # 2=BOM
-        # if not newfile:
-        #     self.tail()
+        if not newfile:
+            self.tail()
 
         logger.debug(f'LogFile({self.path.stem}, {newfile}) pos={self.pos}')
 
