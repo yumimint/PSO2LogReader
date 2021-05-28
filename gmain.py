@@ -21,7 +21,7 @@ class AppConfig:
     volume = 0.25
     fontsize = 11
     geometry = ""
-    rawlog = 0
+    rawlog = False
 
     def load(self):
         try:

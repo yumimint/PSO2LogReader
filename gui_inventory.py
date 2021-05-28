@@ -19,17 +19,16 @@ class InventoryView(tk.Frame):
         notebook.add(self.counterz[0], text="総計")
         notebook.add(tk.Frame(notebook), text="+")
 
-        notebook.bind("<<NotebookTabChanged>>", self.change)
-        notebook.bind("<Button-3>", self.button3, "+")
-
-        setattr(Main, "add_inventory", self.add)
-
         popup = self.popup = tk.Menu(self, tearoff=0)
         self.bv = tk.BooleanVar()
         popup.add_checkbutton(
             label="停止", command=self._pause, variable=self.bv)
         popup.add_separator()
         popup.add_command(label="閉じる", command=self._close)
+
+        notebook.bind("<<NotebookTabChanged>>", self._change)
+        notebook.bind("<Button-3>", self._button3)
+        setattr(Main, "add_inventory", self.add)
 
     def _close(self):
         self.notebook.forget(self._indx)
@@ -43,7 +42,7 @@ class InventoryView(tk.Frame):
         text = "*" + text if state else text[1:]
         self.notebook.tab(self._indx, text=text)
 
-    def button3(self, event):
+    def _button3(self, event):
         notebook = self.notebook
         notebook.event_generate("<1>", x=event.x, y=event.y)
         tabs = notebook.tabs()
@@ -56,7 +55,7 @@ class InventoryView(tk.Frame):
             finally:
                 self.popup.grab_release()
 
-    def change(self, event):
+    def _change(self, event):
         notebook = self.notebook
         tabs = notebook.tabs()
         # 右端のタブが選択されたらCountViewを追加する
@@ -66,7 +65,6 @@ class InventoryView(tk.Frame):
             self.counterz.append(cv)
             notebook.insert(len(tabs) - 1, cv, text=text)
             notebook.select(notebook.tabs()[-2])
-            cv.bind("<2>", lambda event: event.widget.destroy())
 
     def add(self, name, num):
         for c in self.counterz:
@@ -104,9 +102,25 @@ class CountView(tk.Frame):
         self.counter = Counter()
         self.odict = OrderedDict()
 
-        self.tree.bind("<Double-Button-1>", self.dclick)
+        self.tree.bind("<Double-Button-1>", self._dclick)
 
-    def dclick(self, event):
+        popup = self.popup = tk.Menu(self, tearoff=0)
+        popup.add_command(label="コピー", command=self._copy)
+        self.tree.bind("<Button-3>", self._button3)
+
+    def _copy(self):
+        self.clipboard_clear()
+        for name, num in self.counter.items():
+            text = f"{name}\t{num:,}\n"
+            self.clipboard_append(text)
+
+    def _button3(self, event):
+        try:
+            self.popup.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.popup.grab_release()
+
+    def _dclick(self, event):
         tree = self.tree
         sel = tree.selection()
         if sel:
