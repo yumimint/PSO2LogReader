@@ -30,7 +30,7 @@ class Entry(list):
         return self.sequence < other.sequence
 
     def __str__(self):
-        return " | ".join(self)
+        return ",".join(self).replace("\n", r"\n")
 
     @staticmethod
     @functools.lru_cache(maxsize=8)
@@ -82,8 +82,8 @@ class LogFile:
 
         # st_sizeを信用せず、実際に読み進めてposを確定する
         self.pos = 2  # 2=BOM
-        if not newfile:
-            self.tail()
+        # if not newfile:
+        #     self.tail()
 
         logger.debug(f'LogFile({self.path.stem}, {newfile}) pos={self.pos}')
 
@@ -219,15 +219,12 @@ class LogPump:
         self.folderz = {
             path: LogFolder(path, callback)
             for path in map(
-                lambda subpath: sega.joinpath(subpath),
-                [
+                lambda subpath: sega.joinpath(subpath), [
                     'PHANTASYSTARONLINE2/log',
                     'PHANTASYSTARONLINE2_NGS/log',
                     'PHANTASYSTARONLINE2_NGS/log_ngs',
-                    'PHANTASYSTARONLINE2_NGS_CBT/log',
-                    'PHANTASYSTARONLINE2_NGS_CBT/log_ngs',
-                ]
-            ) if path.is_dir()
+                ])
+            if path.is_dir()
         }
         self.th = threading.Thread(target=self._main, daemon=True)
 

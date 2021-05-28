@@ -21,6 +21,7 @@ class AppConfig:
     volume = 0.25
     fontsize = 11
     geometry = ""
+    rawlog = 0
 
     def load(self):
         try:
@@ -42,15 +43,6 @@ class AppConfig:
 
 
 class App(tk.Tk):
-    viewz = [
-        ('ALL', '全て'),
-        ('PUBLIC', '周囲'),
-        ('PARTY', 'パーティー'),
-        ('GUILD', 'チーム'),
-        ('GROUP', 'グループ'),
-        ('REPLY', 'ウィスパー'),
-    ]
-
     def __init__(self, conf: AppConfig):
         super().__init__()
         self.conf = conf
@@ -64,12 +56,21 @@ class App(tk.Tk):
         notebook.enable_traversal()
         notebook.pack(fill=tk.BOTH, expand=True)
 
-        for tag, name in self.viewz:
+        def add_view(tag, name):
             view = LogView(notebook)
             notebook.add(view, text=name)
             self.view[tag] = view
             view.text.bind("<MouseWheel>", self.mouse_wheel)
-        self.set_viewfontsize(conf.fontsize)
+
+        for tag, name in [
+            ('ALL', '全て'),
+            ('PUBLIC', '周囲'),
+            ('PARTY', 'パーティー'),
+            ('GUILD', 'チーム'),
+            ('GROUP', 'グループ'),
+            ('REPLY', 'ウィスパー'),
+        ]:
+            add_view(tag, name)
 
         self.inventory = InventoryView(notebook)
         notebook.add(self.inventory, text="アイテム")
@@ -84,6 +85,10 @@ class App(tk.Tk):
         self.config.load(self.conf)
         notebook.add(self.config, text="設定")
 
+        if self.conf.rawlog:
+            add_view("rawlog", "生ログ")
+
+        self.set_viewfontsize(conf.fontsize)
         setattr(Main, "chat_print", self.chat_print)
         setattr(Main, "clipboard", self.clipboard)
 
@@ -133,9 +138,19 @@ class App(tk.Tk):
 
         self.keep_running = True
 
+        if self.conf.rawlog:
+            rawlog = self.view["rawlog"]
+
+            def rawlogger(ent):
+                rawlog.append(str(ent) + "\n")
+        else:
+            def rawlogger(ent):
+                pass
+
         def loop():
             while not q.empty():
-                ent = q.get()
+                ent = q.get_nowait()
+                rawlogger(ent)
                 Main.on_entry(ent)
 
             self.casino.update()
