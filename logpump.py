@@ -221,8 +221,7 @@ class LogPump:
             for path in map(
                 lambda subpath: sega.joinpath(subpath), [
                     'PHANTASYSTARONLINE2/log',
-                    'PHANTASYSTARONLINE2_NGS/log',
-                    'PHANTASYSTARONLINE2_NGS/log_ngs',
+                    'PHANTASYSTARONLINE2/log_ngs',
                 ])
             if path.is_dir()
         }
