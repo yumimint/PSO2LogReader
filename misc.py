@@ -197,7 +197,7 @@ class ItemCounter(collections.Counter):
     def pair2name(pair):
         item, num = pair
         # item = item.translate(ItemCounter.zen2han_alpha)
-        if item == 'メセタ':
+        if item.endswith('メセタ'):
             return f'{num:,}メセタ'
         if num == 1:
             return item
