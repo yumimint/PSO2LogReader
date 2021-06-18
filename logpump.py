@@ -14,14 +14,15 @@ logger = logging.getLogger(__name__)
 class Entry(list):
     """ログのエントリを表現するクラス"""
 
-    def __init__(self, row: list, category: str):
+    def __init__(self, row: list, category: str, ngs: bool):
         super(Entry, self).__init__(row)
         if len(self) == 3:
             cols = self.pop().split("\t")
             self.extend(cols)
-        self.append(category)
         self.timestamp = self.str2ts(self[0])
         self.sequence = int(self[1])
+        self.category = category
+        self.ngs = ngs
 
     def __eq__(self, other):
         return self.sequence == other.sequence
@@ -30,7 +31,10 @@ class Entry(list):
         return self.sequence < other.sequence
 
     def __str__(self):
-        return ",".join(self).replace("\n", r"\n")
+        s = f"{self.category}:" + ",".join(self).replace("\n", r"\n")
+        if self.ngs:
+            s = "ngs:" + s
+        return s
 
     @staticmethod
     @functools.lru_cache(maxsize=8)
@@ -44,10 +48,6 @@ class Entry(list):
         dt = datetime(year, month, day, hour, minute, second)
         # dt = datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
         return int(dt.timestamp())
-
-    @property
-    def category(self):
-        return self[-1]
 
     # Meseta,Num等の数値を属性として取得する
     def __getattr__(self, name):
@@ -180,6 +180,7 @@ class LogFolder:
             path: LogFile(path)
             for path in self.logs()
         }
+        self.ngs = "ngs" in path.stem
         self.known = set(self.logfiles.keys())
 
     def logs(self):
@@ -204,7 +205,7 @@ class LogFolder:
 
         for log in self.logfiles.values():
             for row in csv.reader(log.tail(), dialect=csv.excel_tab):
-                entry = Entry(row, log.category)
+                entry = Entry(row, log.category, self.ngs)
                 self.callback(entry)
 
         for path in (self.known - now):

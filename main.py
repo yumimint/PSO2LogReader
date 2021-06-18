@@ -184,7 +184,9 @@ def handle_SymbolChat(ent):
 
 
 def handle_Reward(ent):
-    item, num = ent[5], ent.Num
+    item, num = ent[-2], ent.Num
+    if item == "Meseta":
+        item = 'N-メセタ'
     pushitem(item, num)
     if get_config(200):
         clipboard(item)
@@ -209,7 +211,7 @@ def handle_Action(ent):
         pushitem(item, num)
 
     if meseta:
-        pushitem('メセタ', meseta)
+        pushitem('N-メセタ' if ent.ngs else 'メセタ', meseta)
 
 
 def handle_Craft(ent):
