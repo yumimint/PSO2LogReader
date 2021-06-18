@@ -192,6 +192,12 @@ def handle_Reward(ent):
         clipboard(item)
 
 
+def handle_StarGem(ent):
+    num = int(ent[-3])
+    if num > 0:
+        pushitem("スタージェム", num)
+
+
 def handle_Action(ent):
     act, item, num, meseta = ent[2], ent[5], ent.Num, ent.Meseta
     num = 1 if num is None else num
