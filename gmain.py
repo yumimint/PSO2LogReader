@@ -17,7 +17,7 @@ from gui_logview import LogView
 class AppConfig:
     _path = Path(__file__).with_name("config.json")
 
-    on = [100, 101, 102, 103, 104, 300, 105, 301]
+    on = [100, 101, 102, 103, 104, 105, 300, 105, 301]
     volume = 0.25
     fontsize = 11
     geometry = ""

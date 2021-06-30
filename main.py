@@ -161,9 +161,12 @@ def handle_Chat(ent):
 
     equip = re.search(
         r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
-    if equip:
-        if get_config(103):
-            talk(f'{name}が{equip.group(2)}を装備した')
+    if equip and get_config(103):
+        talk(f'{name}が{equip.group(2)}を装備した')
+
+    stamp = re.search(r'/stamp +[^ ]+', mess)
+    if stamp and get_config(105):
+        talk(f'{name}のスタンプ')
 
     txt = chatcmd.strip(mess)
     if txt:
