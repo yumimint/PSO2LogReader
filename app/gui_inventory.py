@@ -3,7 +3,7 @@ from collections import Counter, OrderedDict
 from datetime import datetime
 from tkinter import ttk
 
-import main as Main
+from . import main as Main
 
 
 class InventoryView(tk.Frame):

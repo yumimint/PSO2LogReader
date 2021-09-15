@@ -17,7 +17,7 @@ class UsersFile:
 
     def __init__(self, filename, loader, loader2=None):
         self.mtime = 0
-        self.path = pathlib.Path(__file__).with_name(filename)
+        self.path = pathlib.Path(filename)
         self.loader = loader
         self.loader2 = loader2
 

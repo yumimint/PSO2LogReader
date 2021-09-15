@@ -2,7 +2,7 @@ import tkinter as tk
 from collections import OrderedDict
 from tkinter import ttk
 
-import main as Main
+from . import main as Main
 
 tr_table = {
     chr(0xFF01 + i): chr(0x21 + i)

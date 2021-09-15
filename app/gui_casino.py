@@ -3,7 +3,7 @@ import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-import main as Main
+from . import main as Main
 
 
 class CasinoPane(tk.Frame):

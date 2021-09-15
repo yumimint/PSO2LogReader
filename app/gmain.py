@@ -5,17 +5,17 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from pathlib import Path
 
-import logpump
-import main as Main
-from gui_casino import CasinoPane
-from gui_config import ConfigPane
-from gui_inventory import InventoryView
-from gui_lalistview import LaListView
-from gui_logview import LogView
+from . import logpump
+from . import main as Main
+from .gui_casino import CasinoPane
+from .gui_config import ConfigPane
+from .gui_inventory import InventoryView
+from .gui_lalistview import LaListView
+from .gui_logview import LogView
 
 
 class AppConfig:
-    _path = Path(__file__).with_name("config.json")
+    _path = Path("config.json")
 
     on = [100, 101, 102, 103, 104, 105, 300, 105, 301]
     volume = 0.25
@@ -47,7 +47,7 @@ class App(tk.Tk):
         super().__init__()
         self.conf = conf
         self.title('PSO2LogReadr')
-        self.iconbitmap(Path(__file__).with_name("PSO2LogReader.ico"))
+        self.iconbitmap("PSO2LogReader.ico")
         self.geometry(conf.geometry)
         self.protocol("WM_DELETE_WINDOW", self._close)
 
@@ -183,7 +183,3 @@ def main():
     conf.save()
 
     ctypes.windll.kernel32.ReleaseMutex(appmtx)
-
-
-if __name__ == '__main__':
-    main()

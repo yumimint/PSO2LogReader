@@ -2,8 +2,8 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import webbrowser
 
-import main as Main
-from gui_tooltip import ToolTip
+from . import main as Main
+from .gui_tooltip import ToolTip
 
 itemz = [
     # (code, text)

@@ -1,16 +1,10 @@
-import os
-import pathlib
 import random
 import re
 
-import bouyomichan
-import chatcmd
-import misc
-from playsound import playsound
+from . import bouyomichan, chatcmd, misc
+from .playsound import playsound
 
 REPORT_ITEM_MAX = 10
-
-os.chdir(pathlib.Path(__file__).parent)
 
 casinocounter = misc.CasinoCounter()
 
@@ -137,6 +131,7 @@ def talk(text, guard_time=60):
 
 
 def play_sound(sound, guard_time=1):
+    sound = f"assets/{sound}"
     if not talkactive_sound(sound, guard_time):
         playsound(sound, get_volume())
 
