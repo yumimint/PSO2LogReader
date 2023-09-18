@@ -24,10 +24,6 @@ def info_print(text):
     pass
 
 
-def casino_stateus(text):
-    pass
-
-
 def get_config(code):
     return False
 
@@ -228,27 +224,6 @@ def handle_Scratch(ent):
     if 'Received' in ent[3]:
         item, num = ent[6], ent.Num
         pushitem(item, num)
-
-
-def handle_Amusement(ent):
-    if ent[2] in ['UsePass', 'Buy']:
-        return
-
-    bet, ret, before, after = map(int, ent[5:9])
-
-    c = casinocounter
-    c.update(bet, ret)
-
-    if get_config(101):
-        if ret:
-            bouyomichan.talk(f"{ret}枚当たり 累計{c.income} ヒット率{c.hitrate:.3f}")
-        elif c.defeats > 2:
-            bouyomichan.talk(f'{c.defeats}連敗 ')
-
-    meter = '■' * c.defeats + '□' * (c.defeats_max - c.defeats)
-    casino_stateus(
-        f"{meter} HitRate({c.hitrate:.3f}) "
-        f"ReturnRate({c.rate:.2f}) Income({c.income:,})")
 
 
 def on_entry(ent):

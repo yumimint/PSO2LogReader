@@ -7,7 +7,6 @@ from pathlib import Path
 
 from . import logpump
 from . import main as Main
-from .gui_casino import CasinoPane
 from .gui_config import ConfigPane
 from .gui_inventory import InventoryView
 from .gui_lalistview import LaListView
@@ -74,9 +73,6 @@ class App(tk.Tk):
 
         self.inventory = InventoryView(notebook)
         notebook.add(self.inventory, text="アイテム")
-
-        self.casino = CasinoPane(notebook)
-        notebook.add(self.casino, text="カジノ")
 
         self.laview = LaListView(notebook)
         notebook.add(self.laview, text="ロビアク")
@@ -153,7 +149,6 @@ class App(tk.Tk):
                 rawlogger(ent)
                 Main.on_entry(ent)
 
-            self.casino.update()
             Main.reporter.update()
 
             if self.keep_running:
