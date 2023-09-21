@@ -72,7 +72,14 @@ def sound_test():
         play_sound(sound)
 
 
+item_name_replacer = {
+    'N-Meseta': 'N-メセタ',
+    'Meseta': 'メセタ',
+}
+
+
 def pushitem(item, num):
+    item = item_name_replacer.get(item, item)
     add_inventory(item, num)
     reporter.put(item, num)
     spitem_check_and_notify(item)
@@ -154,10 +161,12 @@ def handle_Chat(ent):
         r'/(skillring|sr|costume|cs|camouflage|cmf) +([^ ]+)', mess)
     if equip and get_config(103):
         talk(f'{name}が{equip.group(2)}を装備した')
+        return
 
     stamp = re.search(r'/stamp +[^ ]+', mess)
     if stamp and get_config(105):
         talk(f'{name}のスタンプ')
+        return
 
     txt = chatcmd.strip(mess)
     if txt:
@@ -179,8 +188,9 @@ def handle_SymbolChat(ent):
 
 def handle_Reward(ent):
     item, num = ent[-2], ent.Num
-    if item == "Meseta":
-        item = 'N-メセタ'
+    if item.endswith('スタージェム'):
+        # handle_StarGemで数えるのでここでは除外
+        return
     pushitem(item, num)
     if get_config(200):
         clipboard(item)
