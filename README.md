@@ -7,18 +7,11 @@
 + チャットの読み上げ
 + 取得アイテムの集計と読み上げ
 + ロビーアクション一覧表
-+ カジノコインのグラフ表示
 
 ## Python環境の準備
 
-1. Pythonのインストール
-
 このプログラムを実行するには Python 3.xx が必要です。
 <https://www.python.jp/install/windows/install.html>
-
-2. モジュールのインストール
-
-install.batを実行してください。
 
 ## 使い方
 
